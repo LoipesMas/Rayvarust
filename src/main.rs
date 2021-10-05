@@ -21,7 +21,7 @@ fn main() {
     let window_width: i16 = 960 * 2;
     let window_height: i16 = 540 * 2;
     let draw_fps = true;
-    let draw_collisions = true;
+    let draw_collisions = false;
 
     let (mut rl, thread) = raylib::init()
         .size(window_width.into(), window_height.into())
@@ -90,7 +90,7 @@ fn main() {
     let rigid_body = RigidBodyBuilder::new_dynamic()
         .translation(vector![0.0, 10.0])
         .build();
-    let collider = ColliderBuilder::capsule_y(13.0, 26.0).position(Isometry::new(vector![0., 3.0], 0.0)).build();
+    let collider = ColliderBuilder::capsule_y(20.0, 20.0).position(Isometry::new(vector![0., 0.0], 0.0)).build();
     let player_body_handle = rigid_body_set.insert(rigid_body);
     collider_set.insert_with_parent(collider, player_body_handle, &mut rigid_body_set);
     player.set_body(player_body_handle);
@@ -182,14 +182,15 @@ fn main() {
             if draw_collisions {
                 for object in phys_objects.iter() {
                     let body = &rigid_body_set[*object.borrow().get_body()];
+                    println!("{:?}", body.colliders().len());
                     for collider in body.colliders() {
                         let collider = &collider_set[*collider];
-                        let aabb = collider.compute_aabb();
+                        let aabb = collider.shape().compute_local_aabb();
                         let h_width = aabb.half_extents()[0];
                         let h_height = aabb.half_extents()[1];
-                        let rec = Rectangle::new(0., 0., h_width*2.0, h_height*2.0);
-                        let origin = -Vector2::new(body.translation().x-h_width, body.translation().y-h_height);
-                        mode.draw_rectangle_pro(rec, origin, 0., COLL_COLOR);
+                        let rec = Rectangle::new(collider.translation().x, collider.translation().y, h_width*2.0, h_height*2.0);
+                        let origin = Vector2::new(h_width, h_height);
+                        mode.draw_rectangle_pro(rec, origin, RAD2DEG as f32*body.rotation().angle(), COLL_COLOR);
                     }
                 }
             }
