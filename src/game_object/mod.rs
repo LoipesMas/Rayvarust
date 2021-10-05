@@ -9,7 +9,27 @@ pub use sprite::Sprite;
 mod player;
 pub use player::Player;
 
-use crate::physics::*;
+use rapier2d::prelude::*;
+
+pub struct GameObject {
+    transform: Transform2D,
+    pub sprite: Option<Sprite>,
+    pub physics_body: Option<RigidBodyHandle>,
+}
+
+impl GameObject {
+    pub fn new() -> GameObject {
+        let transform = Transform2D {
+            position: Vector2::zero(),
+            rotation: 0.0,
+        };
+        GameObject {
+            transform,
+            sprite: None,
+            physics_body: None,
+        }
+    }
+}
 
 pub trait Drawable {
     fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>);
@@ -28,29 +48,11 @@ pub trait Processing {
 }
 
 pub trait PhysicsObject {
-    fn get_body(&self) -> &PhysicsBody;
-    fn get_body_mut(&mut self) -> &mut PhysicsBody;
-    fn physics_process(&mut self, delta: f32);
-}
-
-pub struct GameObject {
-    transform: Transform2D,
-    pub sprite: Option<Sprite>,
-    pub physics_body: Option<PhysicsBody>,
-}
-
-impl GameObject {
-    pub fn new() -> GameObject {
-        let transform = Transform2D {
-            position: Vector2::zero(),
-            rotation: 0.0,
-        };
-        GameObject {
-            transform,
-            sprite: None,
-            physics_body: None,
-        }
-    }
+    fn get_body(&self) -> &RigidBodyHandle;
+    fn set_body(&mut self, body: RigidBodyHandle);
+    fn get_body_mut(&mut self) -> &mut RigidBodyHandle;
+    fn physics_process(&mut self, delta: f32, body: &mut RigidBody);
+    fn update_state(&mut self, body: &RigidBody);
 }
 
 impl Drawable for GameObject {
@@ -81,9 +83,6 @@ impl Spatial for GameObject {
 
     fn set_position(&mut self, position: Vector2) {
         self.transform.position = position;
-        if let Some(b) = self.physics_body.as_mut() {
-            b.set_position(position);
-        }
     }
 
     fn translate(&mut self, vector: Vector2) {
@@ -99,19 +98,31 @@ impl Processing for GameObject {
 }
 
 impl PhysicsObject for GameObject {
-    fn get_body(&self) -> &PhysicsBody {
+    fn get_body(&self) -> &RigidBodyHandle {
         self.physics_body
             .as_ref()
             .expect("Tried to get PhysicsBody of non-physic object")
     }
 
-    fn get_body_mut(&mut self) -> &mut PhysicsBody {
+    fn get_body_mut(&mut self) -> &mut RigidBodyHandle {
         self.physics_body
             .as_mut()
             .expect("Tried to get PhysicsBody of non-physic object")
     }
 
-    fn physics_process(&mut self, delta: f32) {
-        self.translate(self.get_body().get_linear_velocity() * delta);
+    fn set_body(&mut self, body: RigidBodyHandle) {
+        self.physics_body = Some(body);
     }
+
+    fn update_state(&mut self, body: &RigidBody) {
+        let pos = Vector2 {
+            x: body.translation().x,
+            y: body.translation().y,
+        };
+        let rot = body.rotation();
+        self.set_position(pos);
+        self.transform.rotation = rot.angle();
+    }
+
+    fn physics_process(&mut self, delta: f32, body: &mut RigidBody) {}
 }

@@ -101,7 +101,7 @@ impl Sprite {
             self.source_rec,
             dest_rec,
             self.origin,
-            transform.rotation,
+            RAD2DEG as f32 * transform.rotation,
             Color::WHITE,
         );
     }

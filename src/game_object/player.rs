@@ -1,15 +1,18 @@
 use super::{Drawable, GameObject, PhysicsObject, Processing, Spatial, Sprite};
 
-use crate::physics::*;
-
 use raylib::prelude::*;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
+type NVector2 = nalgebra::base::Vector2<Real>;
+
+use rapier2d::prelude::*;
+
 pub struct Player {
     game_object: GameObject,
     pub speed: f32,
+    move_vec: NVector2,
 }
 
 #[allow(dead_code)]
@@ -18,12 +21,14 @@ impl Player {
         let mut game_object = GameObject::new();
         game_object.sprite = Some(Sprite::new(texture, true, 0.7));
 
-        let phys_body = PhysicsBody::new(CollisionShape::Circle(Vector2::zero(), 40.));
-        game_object.physics_body = Some(phys_body);
+        // TODO: use rapier2d to create rigidbody
+        //let phys_body = PhysicsBody::new(CollisionShape::Circle(Vector2::zero(), 40.));
+        //game_object.physics_body = Some(phys_body);
 
         Player {
             game_object,
             speed: 60.0,
+            move_vec: NVector2::zeros(),
         }
     }
 }
@@ -61,39 +66,46 @@ impl Processing for Player {
         let move_l = rl.is_key_down(KeyboardKey::KEY_A);
         let move_r = rl.is_key_down(KeyboardKey::KEY_D);
 
-        let mut move_vec = Vector2::zero();
+        self.move_vec = vector![0.,0.];
 
         if move_u {
-            move_vec.y -= self.speed * 2.0;
+            self.move_vec.y -= self.speed * 2.0;
         }
         if move_d {
-            move_vec.y += self.speed;
+            self.move_vec.y += self.speed;
         }
         if move_l {
-            move_vec.x -= self.speed;
+            self.move_vec.x -= self.speed;
         }
         if move_r {
-            move_vec.x += self.speed;
+            self.move_vec.x += self.speed;
         }
 
-        move_vec *= delta;
-
-        self.game_object
-            .get_body_mut()
-            .add_linear_velocity(move_vec);
+        //self.game_object
+        //    .get_body_mut()
+        //    .add_linear_velocity(move_vec);
     }
 }
 
 impl PhysicsObject for Player {
-    fn get_body(&self) -> &PhysicsBody {
+    fn get_body(&self) -> &RigidBodyHandle {
         self.game_object.get_body()
     }
 
-    fn get_body_mut(&mut self) -> &mut PhysicsBody {
+    fn get_body_mut(&mut self) -> &mut RigidBodyHandle {
         self.game_object.get_body_mut()
     }
 
-    fn physics_process(&mut self, delta: f32) {
-        self.game_object.physics_process(delta);
+    fn set_body(&mut self, body: RigidBodyHandle) {
+        self.game_object.set_body(body);
+    }
+
+    fn physics_process(&mut self, delta: f32, body: &mut RigidBody) {
+        body.set_linvel(body.linvel()+self.move_vec*delta, true);
+        self.game_object.physics_process(delta, body);
+    }
+
+    fn update_state(&mut self, body: &RigidBody) {
+        self.game_object.update_state(body);
     }
 }
