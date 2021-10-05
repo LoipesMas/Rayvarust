@@ -4,9 +4,6 @@ use std::rc::Rc;
 
 mod math;
 
-mod component;
-use component::*;
-
 mod game_object;
 use game_object::*;
 
