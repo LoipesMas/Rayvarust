@@ -11,8 +11,10 @@ use rapier2d::prelude::*;
 
 pub struct Player {
     game_object: GameObject,
-    pub speed: f32,
-    move_vec: NVector2,
+    pub lin_speed: f32,
+    pub ang_speed: f32,
+    move_vec: NVector2, // add this to lin vel on next phys process
+    rot: f32,           // add this to ang vel on next phys process
 }
 
 #[allow(dead_code)]
@@ -27,8 +29,10 @@ impl Player {
 
         Player {
             game_object,
-            speed: 60.0,
+            lin_speed: 30.0,
+            ang_speed: 4.0,
             move_vec: NVector2::zeros(),
+            rot: 0.0,
         }
     }
 }
@@ -54,6 +58,10 @@ impl Spatial for Player {
     fn set_position(&mut self, position: Vector2) {
         self.game_object.set_position(position);
     }
+    fn get_rotation(&self) -> f32 {
+        self.game_object.get_rotation()
+    }
+
     fn translate(&mut self, vector: Vector2) {
         self.set_position(self.get_position() + vector);
     }
@@ -66,24 +74,35 @@ impl Processing for Player {
         let move_l = rl.is_key_down(KeyboardKey::KEY_A);
         let move_r = rl.is_key_down(KeyboardKey::KEY_D);
 
-        self.move_vec = vector![0.,0.];
+        self.move_vec = vector![0., 0.];
 
         if move_u {
-            self.move_vec.y -= self.speed * 2.0;
+            self.move_vec.y -= self.lin_speed * 4.0;
         }
         if move_d {
-            self.move_vec.y += self.speed;
+            self.move_vec.y += self.lin_speed;
         }
         if move_l {
-            self.move_vec.x -= self.speed;
+            self.move_vec.x -= self.lin_speed;
         }
         if move_r {
-            self.move_vec.x += self.speed;
+            self.move_vec.x += self.lin_speed;
         }
 
-        //self.game_object
-        //    .get_body_mut()
-        //    .add_linear_velocity(move_vec);
+        let rot = Rotation::new(self.get_rotation());
+        self.move_vec = rot * self.move_vec;
+
+        let rot_l = rl.is_key_down(KeyboardKey::KEY_I);
+        let rot_r = rl.is_key_down(KeyboardKey::KEY_O);
+
+        self.rot = 0.0;
+        if rot_l {
+            self.rot -= self.ang_speed;
+        }
+        if rot_r {
+            self.rot += self.ang_speed;
+        }
+        
     }
 }
 
@@ -101,7 +120,8 @@ impl PhysicsObject for Player {
     }
 
     fn physics_process(&mut self, delta: f32, body: &mut RigidBody) {
-        body.set_linvel(body.linvel()+self.move_vec*delta, true);
+        body.set_linvel(body.linvel() + self.move_vec * delta, true);
+        body.set_angvel(body.angvel() + self.rot * delta, true);
         self.game_object.physics_process(delta, body);
     }
 

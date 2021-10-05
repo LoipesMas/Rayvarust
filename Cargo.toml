@@ -14,6 +14,7 @@ rapier2d = { version = "0.11.1", features = [ "simd-stable" ] }
 [profile.release]
 panic = 'abort'
 codegen-units = 1
+lto = true
 
 
 [profile.dev.package.rapier2d]

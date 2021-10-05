@@ -40,6 +40,7 @@ pub trait Drawable {
 pub trait Spatial {
     fn get_position(&self) -> Vector2;
     fn set_position(&mut self, position: Vector2);
+    fn get_rotation(&self) -> f32;
     fn translate(&mut self, vector: Vector2);
 }
 
@@ -85,6 +86,10 @@ impl Spatial for GameObject {
         self.transform.position = position;
     }
 
+    fn get_rotation(&self) -> f32 {
+        self.transform.rotation
+    }
+
     fn translate(&mut self, vector: Vector2) {
         self.set_position(self.transform.position + vector);
     }
@@ -119,9 +124,9 @@ impl PhysicsObject for GameObject {
             x: body.translation().x,
             y: body.translation().y,
         };
-        let rot = body.rotation();
+        let rot = body.rotation().angle();
         self.set_position(pos);
-        self.transform.rotation = rot.angle();
+        self.transform.rotation = rot;
     }
 
     fn physics_process(&mut self, delta: f32, body: &mut RigidBody) {}

@@ -36,18 +36,6 @@ fn main() {
     let mut rigid_body_set = RigidBodySet::new();
     let mut collider_set = ColliderSet::new();
 
-    //* Create the ground. */
-    //let collider = ColliderBuilder::cuboid(100.0, 0.1).build();
-    //collider_set.insert(collider);
-
-    //* Create the bouncing ball. */
-    //let rigid_body = RigidBodyBuilder::new_dynamic()
-    //.translation(vector![0.0, 10.0])
-    //.build();
-    //let collider = ColliderBuilder::ball(0.5).restitution(0.7).build();
-    //let ball_body_handle = rigid_body_set.insert(rigid_body);
-    //collider_set.insert_with_parent(collider, ball_body_handle, &mut rigid_body_set);
-
     /* Create other structures necessary for the simulation. */
     let gravity = vector![0.0, 0.0];
     let integration_parameters = IntegrationParameters::default();
@@ -90,7 +78,10 @@ fn main() {
     let rigid_body = RigidBodyBuilder::new_dynamic()
         .translation(vector![0.0, 10.0])
         .build();
-    let collider = ColliderBuilder::capsule_y(20.0, 20.0).position(Isometry::new(vector![0., 0.0], 0.0)).build();
+    let collider = ColliderBuilder::capsule_y(20.0, 20.0)
+        .position(Isometry::new(vector![0., 0.0], 0.0))
+        .density(2.0)
+        .build();
     let player_body_handle = rigid_body_set.insert(rigid_body);
     collider_set.insert_with_parent(collider, player_body_handle, &mut rigid_body_set);
     player.set_body(player_body_handle);
@@ -100,22 +91,19 @@ fn main() {
     draw_objects.push(player_rc.clone());
     phys_objects.push(player_rc.clone());
 
-    let center = vector![40. * 4.5, 50. * 4.5];
+    let center = vector![63. * 4.5, 50. * 4.5];
 
     // Spawn 100 astronauts
     for i in 0..10 {
         for j in 0..10 {
             let mut pl = GameObject::new();
             pl.sprite = Some(Sprite::new(Rc::clone(&astronaut_tex_ref), true, 0.3));
-            let pos = vector![40. * i as f32, 50. * j as f32];
+            let pos = vector![60. * i as f32, 50. * j as f32];
 
             let mut rigid_body = RigidBodyBuilder::new_dynamic().translation(pos).build();
             let collider = ColliderBuilder::capsule_y(4.0, 8.0).build();
 
             let mut vel = center - pos;
-            //if vel.length_sqr() > 0. {
-            //    vel.normalize();
-            //}
             vel.normalize_mut();
             vel *= 30.;
             rigid_body.set_linvel(vel, true);
@@ -165,13 +153,13 @@ fn main() {
         }
 
         camera.target = player_rc.borrow().get_position();
+        //camera.rotation = -player_rc.borrow().get_rotation()*RAD2DEG as f32;
 
         let mut d = rl.begin_drawing(&thread);
 
         {
             let mut mode = d.begin_mode2D(camera);
             mode.clear_background(bg);
-
 
             // Rendering objects
             for object in &draw_objects {
@@ -182,20 +170,30 @@ fn main() {
             if draw_collisions {
                 for object in phys_objects.iter() {
                     let body = &rigid_body_set[*object.borrow().get_body()];
-                    println!("{:?}", body.colliders().len());
                     for collider in body.colliders() {
                         let collider = &collider_set[*collider];
                         let aabb = collider.shape().compute_local_aabb();
                         let h_width = aabb.half_extents()[0];
                         let h_height = aabb.half_extents()[1];
-                        let rec = Rectangle::new(collider.translation().x, collider.translation().y, h_width*2.0, h_height*2.0);
+                        let rec = Rectangle::new(
+                            collider.translation().x,
+                            collider.translation().y,
+                            h_width * 2.0,
+                            h_height * 2.0,
+                        );
                         let origin = Vector2::new(h_width, h_height);
-                        mode.draw_rectangle_pro(rec, origin, RAD2DEG as f32*body.rotation().angle(), COLL_COLOR);
+                        mode.draw_rectangle_pro(
+                            rec,
+                            origin,
+                            RAD2DEG as f32 * body.rotation().angle(),
+                            COLL_COLOR,
+                        );
                     }
                 }
             }
         }
 
+        // Draw fps
         if draw_fps {
             d.draw_text_ex(
                 &font,
