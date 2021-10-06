@@ -5,7 +5,7 @@ use raylib::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-type NVector2 = nalgebra::base::Vector2<Real>;
+use crate::math::NVector2;
 
 use rapier2d::prelude::*;
 
@@ -30,7 +30,7 @@ impl Player {
         Player {
             game_object,
             lin_speed: 30.0,
-            ang_speed: 4.0,
+            ang_speed: 2.0,
             move_vec: NVector2::zeros(),
             rot: 0.0,
         }
@@ -68,6 +68,7 @@ impl Spatial for Player {
 }
 
 impl Processing for Player {
+    #[allow(unused_variables)]
     fn process(&mut self, rl: &mut RaylibHandle, delta: f32) {
         let move_u = rl.is_key_down(KeyboardKey::KEY_W);
         let move_d = rl.is_key_down(KeyboardKey::KEY_S);
@@ -102,7 +103,6 @@ impl Processing for Player {
         if rot_r {
             self.rot += self.ang_speed;
         }
-        
     }
 }
 

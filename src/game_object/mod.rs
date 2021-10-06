@@ -129,5 +129,6 @@ impl PhysicsObject for GameObject {
         self.transform.rotation = rot;
     }
 
+    #[allow(unused_variables)]
     fn physics_process(&mut self, delta: f32, body: &mut RigidBody) {}
 }

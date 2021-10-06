@@ -5,6 +5,7 @@ use std::rc::Rc;
 use rapier2d::prelude::*;
 
 mod math;
+use math::{lerp, to_nv2, to_rv2};
 
 mod game_object;
 use game_object::*;
@@ -70,7 +71,7 @@ fn main() {
         offset: Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0),
         target: Vector2::new(0., 0.),
         rotation: 0.,
-        zoom: 1.,
+        zoom: 0.66,
     };
 
     let mut player = Player::new(Rc::clone(&player_tex_ref));
@@ -147,13 +148,14 @@ fn main() {
             &event_handler,
         );
 
+        camera.rotation = -player_rc.borrow().get_rotation() * RAD2DEG as f32;
+
         for object in phys_objects.iter_mut() {
             let body = &rigid_body_set[*object.borrow().get_body()];
             object.borrow_mut().update_state(body);
         }
 
-        camera.target = player_rc.borrow().get_position();
-        //camera.rotation = -player_rc.borrow().get_rotation()*RAD2DEG as f32;
+        camera.target = to_rv2(lerp(to_nv2(camera.target), to_nv2(player_rc.borrow().get_position()), 0.2));
 
         let mut d = rl.begin_drawing(&thread);
 
