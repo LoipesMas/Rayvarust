@@ -19,10 +19,6 @@ impl Planet {
         let mut game_object = GameObject::new();
         game_object.sprite = Some(Sprite::new(texture, true, 0.7));
 
-        // TODO: use rapier2d to create rigidbody
-        //let phys_body = PhysicsBody::new(CollisionShape::Circle(Vector2::zero(), 40.));
-        //game_object.physics_body = Some(phys_body);
-
         Planet { game_object }
     }
 }

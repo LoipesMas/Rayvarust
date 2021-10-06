@@ -31,8 +31,8 @@ impl PhysicsServer {
             event_handler: (),
         }
     }
-    
-    pub fn step(&mut self, rigid_body_set: &mut RigidBodySet, collider_set: &mut ColliderSet){
+
+    pub fn step(&mut self, rigid_body_set: &mut RigidBodySet, collider_set: &mut ColliderSet) {
         self.physics_pipeline.step(
             &self.gravity,
             &self.integration_parameters,

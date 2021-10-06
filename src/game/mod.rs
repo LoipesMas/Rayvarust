@@ -1,4 +1,4 @@
-use crate::math::{to_rv2, lerp, to_nv2};
+use crate::math::*;
 use rapier2d::prelude::*;
 use raylib::prelude::*;
 use std::cell::RefCell;
@@ -29,9 +29,10 @@ pub struct Game {
     process_objects: Vec<Rc<RefCell<dyn Processing>>>,
     draw_objects: Vec<Rc<RefCell<dyn Drawable>>>,
     phys_objects: Vec<Rc<RefCell<dyn PhysicsObject>>>,
+    planet_objects: Vec<Rc<RefCell<Planet>>>,
     player_rc: Option<Rc<RefCell<Player>>>,
     camera: Camera2D,
-    font: WeakFont, 
+    font: WeakFont,
     asteroid_tex_ref: Rc<RefCell<WeakTexture2D>>,
 }
 
@@ -51,12 +52,14 @@ impl Game {
 
         let font = rl
             .load_font(&thread, "resources/fonts/RobotoMono-Regular.ttf")
-            .expect("Couldn't load font").make_weak();
+            .expect("Couldn't load font")
+            .make_weak();
 
         let asteroid_tex_ref = unsafe {
             let asteroid_tex = rl
                 .load_texture(&thread, "resources/textures/asteroid.png")
-                .expect("Couldn't load astronaut.png").make_weak();
+                .expect("Couldn't load astronaut.png")
+                .make_weak();
             Rc::new(RefCell::new(asteroid_tex))
         };
 
@@ -69,6 +72,7 @@ impl Game {
         let process_objects: Vec<Rc<RefCell<dyn Processing>>> = Vec::new();
         let draw_objects: Vec<Rc<RefCell<dyn Drawable>>> = Vec::new();
         let phys_objects: Vec<Rc<RefCell<dyn PhysicsObject>>> = Vec::new();
+        let planet_objects: Vec<Rc<RefCell<Planet>>> = Vec::new();
 
         let camera = Camera2D {
             offset: Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0),
@@ -91,12 +95,12 @@ impl Game {
             process_objects,
             draw_objects,
             phys_objects,
+            planet_objects,
             player_rc: None,
             camera,
             font,
-            asteroid_tex_ref
+            asteroid_tex_ref,
         }
-        
     }
 
     pub fn step(&mut self) {
@@ -113,8 +117,8 @@ impl Game {
         }
 
         // Physics
-        self.physics_server.step(&mut self.rigid_body_set, &mut self.collider_set);
-
+        self.physics_server
+            .step(&mut self.rigid_body_set, &mut self.collider_set);
 
         for object in self.phys_objects.iter_mut() {
             let body = &self.rigid_body_set[*object.borrow().get_body()];
@@ -187,9 +191,10 @@ impl Game {
         }
     }
 
-    pub fn spawn_player(&mut self, ) {
+    pub fn spawn_player(&mut self) {
         let player_tex_ref = unsafe {
-            let player_tex = self.rl
+            let player_tex = self
+                .rl
                 .load_texture(&self.thread, "resources/textures/spaceship.png")
                 .expect("Couldn't load spaceship.png")
                 .make_weak();
@@ -206,7 +211,11 @@ impl Game {
             .density(2.0)
             .build();
         let player_body_handle = self.rigid_body_set.insert(rigid_body);
-        self.collider_set.insert_with_parent(collider, player_body_handle, &mut self.rigid_body_set);
+        self.collider_set.insert_with_parent(
+            collider,
+            player_body_handle,
+            &mut self.rigid_body_set,
+        );
         player.set_body(player_body_handle);
 
         let player_rc = Rc::new(RefCell::new(player));
@@ -237,7 +246,11 @@ impl Game {
                 rigid_body.set_linvel(vel, true);
 
                 let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
-                self.collider_set.insert_with_parent(collider, rigid_body_handle, &mut self.rigid_body_set);
+                self.collider_set.insert_with_parent(
+                    collider,
+                    rigid_body_handle,
+                    &mut self.rigid_body_set,
+                );
                 asteroid.set_body(rigid_body_handle);
 
                 let asteroid_rc = Rc::new(RefCell::new(asteroid));
@@ -246,5 +259,27 @@ impl Game {
                 self.phys_objects.push(asteroid_rc);
             }
         }
+    }
+
+    /// Spawn a planet at given position
+    /// TODO: add size and stuff
+    pub fn spawn_planet(&mut self, position: NVector2, radius: f32) {
+        let mut planet = Planet::new(Rc::clone(&self.asteroid_tex_ref));
+        planet.set_scale(radius * 0.023);
+
+        let rigid_body = RigidBodyBuilder::new_dynamic()
+            .translation(position)
+            .build();
+        let collider = ColliderBuilder::ball(radius).build();
+
+        let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
+        self.collider_set
+            .insert_with_parent(collider, rigid_body_handle, &mut self.rigid_body_set);
+        planet.set_body(rigid_body_handle);
+
+        let planet_rc = Rc::new(RefCell::new(planet));
+        self.draw_objects.push(planet_rc.clone());
+        self.phys_objects.push(planet_rc.clone());
+        self.planet_objects.push(planet_rc);
     }
 }
