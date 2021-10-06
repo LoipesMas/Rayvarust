@@ -1,13 +1,12 @@
 use crate::math::Transform2D;
 use crate::Rectangle;
-use crate::Texture2D;
 use crate::Vector2;
 use raylib::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Sprite {
-    texture: Rc<RefCell<Texture2D>>,
+    texture: Rc<RefCell<WeakTexture2D>>,
     scale: f32,
     source_rec: Rectangle,
     dest_rec: Rectangle,
@@ -17,7 +16,7 @@ pub struct Sprite {
 
 #[allow(dead_code)]
 impl Sprite {
-    pub fn new(texture: Rc<RefCell<Texture2D>>, centered: bool, scale: f32) -> Sprite {
+    pub fn new(texture: Rc<RefCell<WeakTexture2D>>, centered: bool, scale: f32) -> Sprite {
         let (source_rec, dest_rec) = Sprite::get_recs(Rc::clone(&texture), scale);
         let mut sprite = Sprite {
             texture,
@@ -32,7 +31,7 @@ impl Sprite {
         sprite
     }
 
-    fn get_recs(texture: Rc<RefCell<Texture2D>>, scale: f32) -> (Rectangle, Rectangle) {
+    fn get_recs(texture: Rc<RefCell<WeakTexture2D>>, scale: f32) -> (Rectangle, Rectangle) {
         let tex = texture.as_ref().borrow();
         let source_rec = Rectangle::new(0.0, 0.0, tex.width as f32, tex.height as f32);
         let dest_rec = Rectangle::new(
@@ -45,7 +44,7 @@ impl Sprite {
         (source_rec, dest_rec)
     }
 
-    pub fn set_texture(&mut self, texture: Rc<RefCell<Texture2D>>) {
+    pub fn set_texture(&mut self, texture: Rc<RefCell<WeakTexture2D>>) {
         {
             let tex = texture.as_ref().borrow();
             self.source_rec = Rectangle::new(0.0, 0.0, tex.width as f32, tex.height as f32);

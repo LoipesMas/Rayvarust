@@ -31,8 +31,8 @@ pub struct Game {
     phys_objects: Vec<Rc<RefCell<dyn PhysicsObject>>>,
     player_rc: Option<Rc<RefCell<Player>>>,
     camera: Camera2D,
-    font: Font, 
-    asteroid_tex_ref: Rc<RefCell<Texture2D>>,
+    font: WeakFont, 
+    asteroid_tex_ref: Rc<RefCell<WeakTexture2D>>,
 }
 
 impl Game {
@@ -51,12 +51,14 @@ impl Game {
 
         let font = rl
             .load_font(&thread, "resources/fonts/RobotoMono-Regular.ttf")
-            .expect("Couldn't load font");
+            .expect("Couldn't load font").make_weak();
 
-        let asteroid_tex = rl
-            .load_texture(&thread, "resources/textures/asteroid.png")
-            .expect("Couldn't load astronaut.png");
-        let asteroid_tex_ref = Rc::new(RefCell::new(asteroid_tex));
+        let asteroid_tex_ref = unsafe {
+            let asteroid_tex = rl
+                .load_texture(&thread, "resources/textures/asteroid.png")
+                .expect("Couldn't load astronaut.png").make_weak();
+            Rc::new(RefCell::new(asteroid_tex))
+        };
 
         let bg_color = color::rcolor(47, 40, 70, 255);
 
@@ -186,10 +188,13 @@ impl Game {
     }
 
     pub fn spawn_player(&mut self, ) {
-        let player_tex = self.rl
-            .load_texture(&self.thread, "resources/textures/spaceship.png")
-            .expect("Couldn't load spaceship.png");
-        let player_tex_ref = Rc::new(RefCell::new(player_tex));
+        let player_tex_ref = unsafe {
+            let player_tex = self.rl
+                .load_texture(&self.thread, "resources/textures/spaceship.png")
+                .expect("Couldn't load spaceship.png")
+                .make_weak();
+            Rc::new(RefCell::new(player_tex))
+        };
 
         let mut player = Player::new(Rc::clone(&player_tex_ref));
 

@@ -13,5 +13,7 @@ fn main() {
 
     the_game.spawn_player();
 
+    the_game.spawn_asteroids();
+
     the_game.run();
 }
