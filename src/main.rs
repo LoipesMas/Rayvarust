@@ -15,7 +15,7 @@ const COLL_COLOR: Color = Color {
     r: 70,
     g: 200,
     b: 70,
-    a: 200,
+    a: 130,
 };
 
 fn main() {
@@ -62,10 +62,10 @@ fn main() {
         .expect("Couldn't load spaceship.png");
     let player_tex_ref = Rc::new(RefCell::new(player_tex));
 
-    let astronaut_tex = rl
-        .load_texture(&thread, "resources/textures/astronaut.png")
+    let asteroid_tex = rl
+        .load_texture(&thread, "resources/textures/asteroid.png")
         .expect("Couldn't load astronaut.png");
-    let astronaut_tex_ref = Rc::new(RefCell::new(astronaut_tex));
+    let asteroid_tex_ref = Rc::new(RefCell::new(asteroid_tex));
 
     let mut camera = Camera2D {
         offset: Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0),
@@ -94,15 +94,15 @@ fn main() {
 
     let center = vector![63. * 4.5, 50. * 4.5];
 
-    // Spawn 100 astronauts
+    // Spawn 100 asteroids
     for i in 0..10 {
         for j in 0..10 {
-            let mut pl = GameObject::new();
-            pl.sprite = Some(Sprite::new(Rc::clone(&astronaut_tex_ref), true, 0.3));
+            let mut asteroid = GameObject::new();
+            asteroid.sprite = Some(Sprite::new(Rc::clone(&asteroid_tex_ref), true, 0.3));
             let pos = vector![60. * i as f32, 50. * j as f32];
 
             let mut rigid_body = RigidBodyBuilder::new_dynamic().translation(pos).build();
-            let collider = ColliderBuilder::capsule_y(4.0, 8.0).build();
+            let collider = ColliderBuilder::capsule_y(0.0, 13.0).build();
 
             let mut vel = center - pos;
             vel.normalize_mut();
@@ -111,12 +111,12 @@ fn main() {
 
             let rigid_body_handle = rigid_body_set.insert(rigid_body);
             collider_set.insert_with_parent(collider, rigid_body_handle, &mut rigid_body_set);
-            pl.set_body(rigid_body_handle);
+            asteroid.set_body(rigid_body_handle);
 
-            let pl_rc = Rc::new(RefCell::new(pl));
-            process_objects.push(pl_rc.clone());
-            draw_objects.push(pl_rc.clone());
-            phys_objects.push(pl_rc.clone());
+            let asteroid_rc = Rc::new(RefCell::new(asteroid));
+            process_objects.push(asteroid_rc.clone());
+            draw_objects.push(asteroid_rc.clone());
+            phys_objects.push(asteroid_rc.clone());
         }
     }
 
@@ -155,7 +155,7 @@ fn main() {
             object.borrow_mut().update_state(body);
         }
 
-        camera.target = to_rv2(lerp(to_nv2(camera.target), to_nv2(player_rc.borrow().get_position()), 0.2));
+        camera.target = to_rv2(lerp(to_nv2(camera.target), to_nv2(player_rc.borrow().get_position()), 0.17));
 
         let mut d = rl.begin_drawing(&thread);
 
