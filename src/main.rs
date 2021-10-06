@@ -1,5 +1,5 @@
-use ::core::cell::RefCell;
 use raylib::prelude::*;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use rapier2d::prelude::*;
@@ -17,6 +17,41 @@ const COLL_COLOR: Color = Color {
     b: 70,
     a: 130,
 };
+
+fn spawn_player(
+    rl: &mut RaylibHandle,
+    thread: &RaylibThread,
+    rigid_body_set: &mut RigidBodySet,
+    collider_set: &mut ColliderSet,
+    process_objects: &mut Vec<Rc<RefCell<dyn Processing>>>,
+    draw_objects: &mut Vec<Rc<RefCell<dyn Drawable>>>,
+    phys_objects: &mut Vec<Rc<RefCell<dyn PhysicsObject>>>,
+) -> Rc<RefCell<Player>> {
+    let player_tex = rl
+        .load_texture(thread, "resources/textures/spaceship.png")
+        .expect("Couldn't load spaceship.png");
+    let player_tex_ref = Rc::new(RefCell::new(player_tex));
+
+    let mut player = Player::new(Rc::clone(&player_tex_ref));
+
+    let rigid_body = RigidBodyBuilder::new_dynamic()
+        .translation(vector![0.0, 10.0])
+        .build();
+    let collider = ColliderBuilder::capsule_y(20.0, 20.0)
+        .position(Isometry::new(vector![0., 0.0], 0.0))
+        .density(2.0)
+        .build();
+    let player_body_handle = rigid_body_set.insert(rigid_body);
+    collider_set.insert_with_parent(collider, player_body_handle, rigid_body_set);
+    player.set_body(player_body_handle);
+
+    let player_rc = Rc::new(RefCell::new(player));
+    process_objects.push(player_rc.clone());
+    draw_objects.push(player_rc.clone());
+    phys_objects.push(player_rc.clone());
+
+    player_rc
+}
 
 fn main() {
     let window_width: i16 = 960 * 2;
@@ -57,11 +92,6 @@ fn main() {
         .load_font(&thread, "resources/fonts/RobotoMono-Regular.ttf")
         .expect("Couldn't load font");
 
-    let player_tex = rl
-        .load_texture(&thread, "resources/textures/spaceship.png")
-        .expect("Couldn't load spaceship.png");
-    let player_tex_ref = Rc::new(RefCell::new(player_tex));
-
     let asteroid_tex = rl
         .load_texture(&thread, "resources/textures/asteroid.png")
         .expect("Couldn't load astronaut.png");
@@ -74,23 +104,15 @@ fn main() {
         zoom: 0.66,
     };
 
-    let mut player = Player::new(Rc::clone(&player_tex_ref));
-
-    let rigid_body = RigidBodyBuilder::new_dynamic()
-        .translation(vector![0.0, 10.0])
-        .build();
-    let collider = ColliderBuilder::capsule_y(20.0, 20.0)
-        .position(Isometry::new(vector![0., 0.0], 0.0))
-        .density(2.0)
-        .build();
-    let player_body_handle = rigid_body_set.insert(rigid_body);
-    collider_set.insert_with_parent(collider, player_body_handle, &mut rigid_body_set);
-    player.set_body(player_body_handle);
-
-    let player_rc = Rc::new(RefCell::new(player));
-    process_objects.push(player_rc.clone());
-    draw_objects.push(player_rc.clone());
-    phys_objects.push(player_rc.clone());
+    let player_rc = spawn_player(
+        &mut rl,
+        &thread,
+        &mut rigid_body_set,
+        &mut collider_set,
+        &mut process_objects,
+        &mut draw_objects,
+        &mut phys_objects,
+    );
 
     let center = vector![63. * 4.5, 50. * 4.5];
 
@@ -155,7 +177,11 @@ fn main() {
             object.borrow_mut().update_state(body);
         }
 
-        camera.target = to_rv2(lerp(to_nv2(camera.target), to_nv2(player_rc.borrow().get_position()), 0.17));
+        camera.target = to_rv2(lerp(
+            to_nv2(camera.target),
+            to_nv2(player_rc.borrow().get_position()),
+            0.17,
+        ));
 
         let mut d = rl.begin_drawing(&thread);
 

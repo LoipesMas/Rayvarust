@@ -3,11 +3,16 @@ use raylib::prelude::*;
 
 use crate::math::Transform2D;
 
+mod utils;
+
 mod sprite;
 pub use sprite::Sprite;
 
 mod player;
 pub use player::Player;
+
+mod planet;
+pub use planet::Planet;
 
 use rapier2d::prelude::*;
 

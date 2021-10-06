@@ -1,5 +1,7 @@
 use super::{Drawable, GameObject, PhysicsObject, Processing, Spatial, Sprite};
 
+use crate::{impl_drawable, impl_spatial};
+
 use raylib::prelude::*;
 
 use std::cell::RefCell;
@@ -19,7 +21,7 @@ pub struct Player {
 
 #[allow(dead_code)]
 impl Player {
-    pub fn new(texture: Rc<RefCell<Texture2D>>) -> Player {
+    pub fn new(texture: Rc<RefCell<Texture2D>>) -> Self {
         let mut game_object = GameObject::new();
         game_object.sprite = Some(Sprite::new(texture, true, 0.7));
 
@@ -37,35 +39,8 @@ impl Player {
     }
 }
 
-impl Drawable for Player {
-    fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>) {
-        self.game_object.draw(rl);
-    }
-
-    fn get_scale(&self) -> f32 {
-        self.game_object.get_scale()
-    }
-
-    fn set_scale(&mut self, scale: f32) {
-        self.game_object.set_scale(scale);
-    }
-}
-
-impl Spatial for Player {
-    fn get_position(&self) -> Vector2 {
-        self.game_object.get_position()
-    }
-    fn set_position(&mut self, position: Vector2) {
-        self.game_object.set_position(position);
-    }
-    fn get_rotation(&self) -> f32 {
-        self.game_object.get_rotation()
-    }
-
-    fn translate(&mut self, vector: Vector2) {
-        self.set_position(self.get_position() + vector);
-    }
-}
+impl_spatial!(Player);
+impl_drawable!(Player);
 
 impl Processing for Player {
     #[allow(unused_variables)]

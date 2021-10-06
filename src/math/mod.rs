@@ -22,19 +22,17 @@ where
 }
 
 /// Converts nalgebra Vector2 to raylib's Vector2
-pub fn to_rv2 (nvec: NVector2) -> Vector2{
-    Vector2{
+pub fn to_rv2(nvec: NVector2) -> Vector2 {
+    Vector2 {
         x: nvec[0],
-        y: nvec[1]
+        y: nvec[1],
     }
 }
 
 /// Converts raylib's Vector2 to nalgebra Vector2
-pub fn to_nv2 (rvec: Vector2) -> NVector2{
+pub fn to_nv2(rvec: Vector2) -> NVector2 {
     let mut result = NVector2::zeros();
     result.x = rvec.x;
     result.y = rvec.y;
     result
 }
-
-
