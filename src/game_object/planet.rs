@@ -1,49 +1,91 @@
-use super::{Drawable, GameObject, PhysicsObject, Spatial, Sprite};
+use super::{Drawable, PhysicsObject, Spatial};
 
 use raylib::prelude::*;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use crate::{impl_drawable, impl_spatial};
+use crate::math::Transform2D;
 
 use rapier2d::prelude::*;
 
 pub struct Planet {
-    game_object: GameObject,
+    transform: Transform2D,
+    radius: f32,
+    physics_body: Option<RigidBodyHandle>,
+    mass: f32,
 }
 
 impl Planet {
     #[allow(dead_code)]
-    pub fn new(texture: Rc<RefCell<WeakTexture2D>>) -> Self {
-        let mut game_object = GameObject::new();
-        game_object.sprite = Some(Sprite::new(texture, true, 0.7));
+    pub fn new(position: Vector2, rotation: f32, radius: f32) -> Self {
+        let transform = Transform2D { position, rotation };
 
-        Planet { game_object }
+        Planet {
+            transform,
+            radius,
+            physics_body: None,
+            mass: 0.,
+        }
+    }
+
+    pub fn get_mass(&self) -> f32 {
+        self.mass
     }
 }
 
-impl_spatial!(Planet);
-impl_drawable!(Planet);
+impl Spatial for Planet {
+    fn get_position(&self) -> Vector2 {
+        self.transform.position
+    }
+    fn set_position(&mut self, position: Vector2) {
+        self.transform.position = position;
+    }
+    fn get_rotation(&self) -> f32 {
+        self.transform.rotation
+    }
+
+    fn translate(&mut self, vector: Vector2) {
+        self.set_position(self.get_position() + vector);
+    }
+}
+
+impl Drawable for Planet {
+    fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>) {
+        rl.draw_circle_v(
+            self.get_position(),
+            self.radius,
+            Color::new(80, 200, 120, 255),
+        );
+    }
+
+    fn get_scale(&self) -> f32 {
+        1.0
+    }
+
+    #[allow(unused_variables)]
+    fn set_scale(&mut self, scale: f32) {}
+}
 
 impl PhysicsObject for Planet {
     fn get_body(&self) -> &RigidBodyHandle {
-        self.game_object.get_body()
-    }
-
-    fn get_body_mut(&mut self) -> &mut RigidBodyHandle {
-        self.game_object.get_body_mut()
+        self.physics_body
+            .as_ref()
+            .expect("Tried to get PhysicsBody of non-physic object")
     }
 
     fn set_body(&mut self, body: RigidBodyHandle) {
-        self.game_object.set_body(body);
+        self.physics_body = Some(body);
     }
 
-    fn physics_process(&mut self, delta: f32, body: &mut RigidBody) {
-        self.game_object.physics_process(delta, body);
-    }
+    #[allow(unused_variables)]
+    fn physics_process(&mut self, delta: f32, body: &mut RigidBody) {}
 
     fn update_state(&mut self, body: &RigidBody) {
-        self.game_object.update_state(body);
+        let pos = Vector2 {
+            x: body.translation().x,
+            y: body.translation().y,
+        };
+        let rot = body.rotation().angle();
+        self.mass = body.mass();
+        self.set_position(pos);
+        self.transform.rotation = rot;
     }
 }

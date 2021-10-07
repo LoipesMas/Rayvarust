@@ -56,7 +56,6 @@ pub trait Processing {
 pub trait PhysicsObject {
     fn get_body(&self) -> &RigidBodyHandle;
     fn set_body(&mut self, body: RigidBodyHandle);
-    fn get_body_mut(&mut self) -> &mut RigidBodyHandle;
     fn physics_process(&mut self, delta: f32, body: &mut RigidBody);
     fn update_state(&mut self, body: &RigidBody);
 }
@@ -102,21 +101,13 @@ impl Spatial for GameObject {
 
 impl Processing for GameObject {
     #[allow(unused_variables)]
-    fn process(&mut self, rl: &mut RaylibHandle, delta: f32) {
-        let x = f32::sqrt(delta);
-    }
+    fn process(&mut self, rl: &mut RaylibHandle, delta: f32) {}
 }
 
 impl PhysicsObject for GameObject {
     fn get_body(&self) -> &RigidBodyHandle {
         self.physics_body
             .as_ref()
-            .expect("Tried to get PhysicsBody of non-physic object")
-    }
-
-    fn get_body_mut(&mut self) -> &mut RigidBodyHandle {
-        self.physics_body
-            .as_mut()
             .expect("Tried to get PhysicsBody of non-physic object")
     }
 

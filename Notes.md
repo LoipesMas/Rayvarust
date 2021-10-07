@@ -1,9 +1,7 @@
 # TODO
 
-- ECS?
-- Physics
-- Some graphics
 - Planets
+- Some graphics
 - Hoops
 
 # Ideas

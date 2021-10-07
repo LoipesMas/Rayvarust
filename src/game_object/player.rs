@@ -17,6 +17,7 @@ pub struct Player {
     pub ang_speed: f32,
     move_vec: NVector2, // add this to lin vel on next phys process
     rot: f32,           // add this to ang vel on next phys process
+    zoom: f32,
 }
 
 #[allow(dead_code)]
@@ -31,7 +32,11 @@ impl Player {
             ang_speed: 1.0,
             move_vec: NVector2::zeros(),
             rot: 0.0,
+            zoom: 1.0,
         }
+    }
+    pub fn get_zoom(&self) -> f32 {
+        self.zoom
     }
 }
 
@@ -39,8 +44,8 @@ impl_spatial!(Player);
 impl_drawable!(Player);
 
 impl Processing for Player {
-    #[allow(unused_variables)]
     fn process(&mut self, rl: &mut RaylibHandle, delta: f32) {
+        // Movement
         let move_u = rl.is_key_down(KeyboardKey::KEY_W);
         let move_d = rl.is_key_down(KeyboardKey::KEY_S);
         let move_l = rl.is_key_down(KeyboardKey::KEY_A);
@@ -64,6 +69,7 @@ impl Processing for Player {
         let rot = Rotation::new(self.get_rotation());
         self.move_vec = rot * self.move_vec;
 
+        // Rotating
         let rot_l = rl.is_key_down(KeyboardKey::KEY_I);
         let rot_r = rl.is_key_down(KeyboardKey::KEY_O);
 
@@ -74,16 +80,24 @@ impl Processing for Player {
         if rot_r {
             self.rot += self.ang_speed;
         }
+
+        // Zoom
+        let zoom_plus = rl.is_key_down(KeyboardKey::KEY_LEFT_BRACKET);
+        let zoom_minus = rl.is_key_down(KeyboardKey::KEY_RIGHT_BRACKET);
+
+        if zoom_plus {
+            self.zoom *= 1.0 / (1.0 + delta * 4.0);
+        }
+        if zoom_minus {
+            self.zoom *= 1.0 + delta * 4.0;
+        }
+        self.zoom = self.zoom.min(3.).max(0.18);
     }
 }
 
 impl PhysicsObject for Player {
     fn get_body(&self) -> &RigidBodyHandle {
         self.game_object.get_body()
-    }
-
-    fn get_body_mut(&mut self) -> &mut RigidBodyHandle {
-        self.game_object.get_body_mut()
     }
 
     fn set_body(&mut self, body: RigidBodyHandle) {

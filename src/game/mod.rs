@@ -17,6 +17,8 @@ const COLL_COLOR: Color = Color {
     a: 130,
 };
 
+const G: f32 = 10.0;
+
 pub struct Game {
     rl: RaylibHandle,
     thread: RaylibThread,
@@ -83,6 +85,8 @@ impl Game {
 
         let physics_server = PhysicsServer::new();
 
+        rl.hide_cursor();
+
         Game {
             rl,
             thread,
@@ -111,8 +115,21 @@ impl Game {
             object.borrow_mut().process(&mut self.rl, delta);
         }
 
+        // Calculating gravity forces
+        let mut planets_vector: Vec<(NVector2, f32)> = Vec::new();
+        for planet in self.planet_objects.iter() {
+            let pos = planet.borrow().get_position();
+            let mass = planet.borrow().get_mass();
+            planets_vector.push((vector![pos.x, pos.y], mass));
+        }
+
         for object in self.phys_objects.iter_mut() {
             let body = &mut self.rigid_body_set[*object.borrow().get_body()];
+            for planet_v in planets_vector.iter() {
+                let dir = planet_v.0 - body.translation();
+                let force = dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
+                body.apply_force(force * body.mass(), true);
+            }
             object.borrow_mut().physics_process(delta, body);
         }
 
@@ -132,8 +149,10 @@ impl Game {
                 0.17,
             ));
             self.camera.rotation = -player_rc.borrow().get_rotation() * RAD2DEG as f32;
+            self.camera.zoom = player_rc.borrow().get_zoom();
         }
 
+        // Drawing
         let mut d = self.rl.begin_drawing(&self.thread);
 
         {
@@ -191,7 +210,7 @@ impl Game {
         }
     }
 
-    pub fn spawn_player(&mut self) {
+    pub fn spawn_player(&mut self, position: NVector2) {
         let player_tex_ref = unsafe {
             let player_tex = self
                 .rl
@@ -204,12 +223,14 @@ impl Game {
         let mut player = Player::new(Rc::clone(&player_tex_ref));
 
         let rigid_body = RigidBodyBuilder::new_dynamic()
-            .translation(vector![0.0, 10.0])
+            .translation(position)
             .build();
         let collider = ColliderBuilder::capsule_y(20.0, 20.0)
             .position(Isometry::new(vector![0., 0.0], 0.0))
-            .density(2.0)
             .build();
+
+        player.update_state(&rigid_body);
+
         let player_body_handle = self.rigid_body_set.insert(rigid_body);
         self.collider_set.insert_with_parent(
             collider,
@@ -238,7 +259,7 @@ impl Game {
                 let pos = vector![60. * i as f32, 50. * j as f32];
 
                 let mut rigid_body = RigidBodyBuilder::new_dynamic().translation(pos).build();
-                let collider = ColliderBuilder::capsule_y(0.0, 13.0).build();
+                let collider = ColliderBuilder::capsule_y(0.0, 13.0).density(0.5).build();
 
                 let mut vel = center - pos;
                 vel.normalize_mut();
@@ -262,15 +283,11 @@ impl Game {
     }
 
     /// Spawn a planet at given position
-    /// TODO: add size and stuff
     pub fn spawn_planet(&mut self, position: NVector2, radius: f32) {
-        let mut planet = Planet::new(Rc::clone(&self.asteroid_tex_ref));
-        planet.set_scale(radius * 0.023);
+        let mut planet = Planet::new(to_rv2(position), 0., radius);
 
-        let rigid_body = RigidBodyBuilder::new_dynamic()
-            .translation(position)
-            .build();
-        let collider = ColliderBuilder::ball(radius).build();
+        let rigid_body = RigidBodyBuilder::new_static().translation(position).build();
+        let collider = ColliderBuilder::ball(radius).density(5.0).build();
 
         let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
         self.collider_set
