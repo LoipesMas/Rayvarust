@@ -28,7 +28,7 @@ impl Player {
 
         Player {
             game_object,
-            lin_speed: 30.0,
+            lin_speed: 40.0,
             ang_speed: 1.0,
             move_vec: NVector2::zeros(),
             rot: 0.0,
@@ -54,7 +54,7 @@ impl Processing for Player {
         self.move_vec = vector![0., 0.];
 
         if move_u {
-            self.move_vec.y -= self.lin_speed * 4.0;
+            self.move_vec.y -= self.lin_speed * 3.0;
         }
         if move_d {
             self.move_vec.y += self.lin_speed;

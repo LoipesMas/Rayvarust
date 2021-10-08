@@ -17,7 +17,7 @@ pub struct Sprite {
 #[allow(dead_code)]
 impl Sprite {
     pub fn new(texture: Rc<RefCell<WeakTexture2D>>, centered: bool, scale: f32) -> Sprite {
-        let (source_rec, dest_rec) = Sprite::get_recs(Rc::clone(&texture), scale);
+        let (source_rec, dest_rec) = Sprite::get_recs(&texture, scale);
         let mut sprite = Sprite {
             texture,
             scale,
@@ -31,7 +31,7 @@ impl Sprite {
         sprite
     }
 
-    fn get_recs(texture: Rc<RefCell<WeakTexture2D>>, scale: f32) -> (Rectangle, Rectangle) {
+    fn get_recs(texture: &Rc<RefCell<WeakTexture2D>>, scale: f32) -> (Rectangle, Rectangle) {
         let tex = texture.as_ref().borrow();
         let source_rec = Rectangle::new(0.0, 0.0, tex.width as f32, tex.height as f32);
         let dest_rec = Rectangle::new(

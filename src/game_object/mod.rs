@@ -14,6 +14,9 @@ pub use player::Player;
 mod planet;
 pub use planet::Planet;
 
+mod gate;
+pub use gate::Gate;
+
 use rapier2d::prelude::*;
 
 pub struct GameObject {

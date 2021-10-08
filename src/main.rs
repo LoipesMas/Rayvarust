@@ -11,12 +11,16 @@ use rapier2d::prelude::*;
 fn main() {
     let mut the_game = Game::new();
 
-    the_game.spawn_player(vector![0., 0.]);
+    the_game.spawn_planet(vector![500., -1400.], 400.);
+    the_game.spawn_planet(vector![800., 2300.], 600.);
 
-    the_game.spawn_planet(vector![500., -1000.], 300.);
-    the_game.spawn_planet(vector![500., 2000.], 500.);
+    the_game.spawn_gate(vector![100., 0.0]);
 
     the_game.spawn_asteroids();
+
+    the_game.spawn_player(vector![0., 0.]);
+
+    the_game.spawn_gate(vector![-300., 0.0]);
 
     the_game.run();
 }

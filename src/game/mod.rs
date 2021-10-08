@@ -32,10 +32,12 @@ pub struct Game {
     draw_objects: Vec<Rc<RefCell<dyn Drawable>>>,
     phys_objects: Vec<Rc<RefCell<dyn PhysicsObject>>>,
     planet_objects: Vec<Rc<RefCell<Planet>>>,
+    gate_objects: Vec<Rc<RefCell<Gate>>>,
     player_rc: Option<Rc<RefCell<Player>>>,
     camera: Camera2D,
     font: WeakFont,
     asteroid_tex_ref: Rc<RefCell<WeakTexture2D>>,
+    gate_tex_ref: Rc<RefCell<WeakTexture2D>>,
 }
 
 impl Game {
@@ -60,9 +62,17 @@ impl Game {
         let asteroid_tex_ref = unsafe {
             let asteroid_tex = rl
                 .load_texture(&thread, "resources/textures/asteroid.png")
-                .expect("Couldn't load astronaut.png")
+                .expect("Couldn't load asteroid.png")
                 .make_weak();
             Rc::new(RefCell::new(asteroid_tex))
+        };
+
+        let gate_tex_ref = unsafe {
+            let gate_tex = rl
+                .load_texture(&thread, "resources/textures/gate.png")
+                .expect("Couldn't load gate.png")
+                .make_weak();
+            Rc::new(RefCell::new(gate_tex))
         };
 
         let bg_color = color::rcolor(47, 40, 70, 255);
@@ -75,6 +85,7 @@ impl Game {
         let draw_objects: Vec<Rc<RefCell<dyn Drawable>>> = Vec::new();
         let phys_objects: Vec<Rc<RefCell<dyn PhysicsObject>>> = Vec::new();
         let planet_objects: Vec<Rc<RefCell<Planet>>> = Vec::new();
+        let gate_objects: Vec<Rc<RefCell<Gate>>> = Vec::new();
 
         let camera = Camera2D {
             offset: Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0),
@@ -100,15 +111,21 @@ impl Game {
             draw_objects,
             phys_objects,
             planet_objects,
+            gate_objects,
             player_rc: None,
             camera,
             font,
             asteroid_tex_ref,
+            gate_tex_ref,
         }
     }
 
     pub fn step(&mut self) {
         let delta = self.rl.get_frame_time();
+
+        if self.rl.is_key_pressed(KeyboardKey::KEY_B) {
+            self.draw_collisions ^= true;
+        }
 
         // Processing
         for object in &self.process_objects {
@@ -159,9 +176,14 @@ impl Game {
             let mut mode = d.begin_mode2D(self.camera);
             mode.clear_background(self.bg_color);
 
+            // Render gates first
+            for gate in self.gate_objects.iter() {
+                gate.borrow().draw(&mut mode);
+            }
+
             // Rendering objects
             for object in &self.draw_objects {
-                object.borrow_mut().draw(&mut mode);
+                object.borrow().draw(&mut mode);
             }
 
             // Draw collision
@@ -220,7 +242,7 @@ impl Game {
             Rc::new(RefCell::new(player_tex))
         };
 
-        let mut player = Player::new(Rc::clone(&player_tex_ref));
+        let mut player = Player::new(player_tex_ref);
 
         let rigid_body = RigidBodyBuilder::new_dynamic()
             .translation(position)
@@ -248,6 +270,7 @@ impl Game {
 
     /// Spawns 100 asteroids
     /// (For testing)
+    // TODO: make seperate function for spawning an asteroid
     pub fn spawn_asteroids(&mut self) {
         let center = vector![63. * 4.5, 50. * 4.5];
 
@@ -255,11 +278,11 @@ impl Game {
         for i in 0..10 {
             for j in 0..10 {
                 let mut asteroid = GameObject::new();
-                asteroid.sprite = Some(Sprite::new(Rc::clone(&self.asteroid_tex_ref), true, 0.3));
+                asteroid.sprite = Some(Sprite::new(self.asteroid_tex_ref.clone(), true, 0.3));
                 let pos = vector![60. * i as f32, 50. * j as f32];
 
                 let mut rigid_body = RigidBodyBuilder::new_dynamic().translation(pos).build();
-                let collider = ColliderBuilder::capsule_y(0.0, 13.0).density(0.5).build();
+                let collider = ColliderBuilder::capsule_y(0.0, 13.0).restitution(0.8).density(0.5).build();
 
                 let mut vel = center - pos;
                 vel.normalize_mut();
@@ -282,7 +305,7 @@ impl Game {
         }
     }
 
-    /// Spawn a planet at given position
+    /// Spawn a planet at given position with given radius
     pub fn spawn_planet(&mut self, position: NVector2, radius: f32) {
         let mut planet = Planet::new(to_rv2(position), 0., radius);
 
@@ -298,5 +321,46 @@ impl Game {
         self.draw_objects.push(planet_rc.clone());
         self.phys_objects.push(planet_rc.clone());
         self.planet_objects.push(planet_rc);
+    }
+
+    /// Spawn a gate at given position
+    pub fn spawn_gate(&mut self, position: NVector2) {
+        let mut gate = Gate::new(self.gate_tex_ref.clone());
+
+        let width = 15.0;
+        let height = 115.0;
+
+        let rigid_body = RigidBodyBuilder::new_static().translation(position).build();
+        let area_collider = ColliderBuilder::cuboid(width, height).sensor(true).build();
+        let gate_collider_1 = ColliderBuilder::ball(width)
+            .translation(vector![0., height])
+            .build();
+        let gate_collider_2 = ColliderBuilder::ball(width)
+            .translation(vector![0., -(height)])
+            .build();
+
+        let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
+        self.collider_set.insert_with_parent(
+            area_collider,
+            rigid_body_handle,
+            &mut self.rigid_body_set,
+        );
+
+        self.collider_set.insert_with_parent(
+            gate_collider_1,
+            rigid_body_handle,
+            &mut self.rigid_body_set,
+        );
+        self.collider_set.insert_with_parent(
+            gate_collider_2,
+            rigid_body_handle,
+            &mut self.rigid_body_set,
+        );
+
+        gate.set_body(rigid_body_handle);
+
+        let gate_rc = Rc::new(RefCell::new(gate));
+        self.phys_objects.push(gate_rc.clone());
+        self.gate_objects.push(gate_rc);
     }
 }
