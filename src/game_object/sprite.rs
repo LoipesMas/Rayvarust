@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 pub struct Sprite {
     texture: Rc<RefCell<WeakTexture2D>>,
+    pub tint: Color,
     scale: f32,
     source_rec: Rectangle,
     dest_rec: Rectangle,
@@ -20,6 +21,7 @@ impl Sprite {
         let (source_rec, dest_rec) = Sprite::get_recs(&texture, scale);
         let mut sprite = Sprite {
             texture,
+            tint: Color::WHITE,
             scale,
             source_rec,
             dest_rec,
@@ -78,6 +80,10 @@ impl Sprite {
         self.update_origin();
     }
 
+    pub fn set_tint(&mut self, tint: Color) {
+        self.tint = tint;
+    }
+
     fn update_origin(&mut self) {
         let tex = self.texture.as_ref().borrow();
         if self.centered {
@@ -101,7 +107,7 @@ impl Sprite {
             dest_rec,
             self.origin,
             RAD2DEG as f32 * transform.rotation,
-            Color::WHITE,
+            self.tint,
         );
     }
 }

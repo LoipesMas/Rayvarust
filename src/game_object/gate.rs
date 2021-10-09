@@ -1,4 +1,4 @@
-use super::{Drawable, GameObject, PhysicsObject, Processing, Spatial, Sprite};
+use super::{Drawable, GameObject, PhysicsObject, Spatial, Sprite};
 
 use crate::{impl_drawable, impl_spatial};
 
@@ -7,20 +7,24 @@ use raylib::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::math::NVector2;
-
 use rapier2d::prelude::*;
 
 pub struct Gate {
-    game_object: GameObject,
+    pub game_object: GameObject,
+    pub gate_num: u32,
 }
+
+pub const HIGHLIGHT_COLOR: Color = Color::new(250, 200, 200, 255);
 
 impl Gate {
     pub fn new(texture: Rc<RefCell<WeakTexture2D>>) -> Self {
         let mut game_object = GameObject::new();
         game_object.sprite = Some(Sprite::new(texture, true, 0.7));
 
-        Self { game_object }
+        Self {
+            game_object,
+            gate_num: 0,
+        }
     }
 }
 

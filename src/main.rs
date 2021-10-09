@@ -18,9 +18,11 @@ fn main() {
 
     the_game.spawn_asteroids();
 
-    the_game.spawn_player(vector![0., 0.]);
+    the_game.spawn_player(vector![-100., 0.]);
 
     the_game.spawn_gate(vector![-300., 0.0]);
+
+    the_game.spawn_gate(vector![-500., 0.0]);
 
     the_game.run();
 }

@@ -15,7 +15,7 @@ mod planet;
 pub use planet::Planet;
 
 mod gate;
-pub use gate::Gate;
+pub use gate::{Gate, HIGHLIGHT_COLOR};
 
 use rapier2d::prelude::*;
 
@@ -43,6 +43,7 @@ pub trait Drawable {
     fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>);
     fn get_scale(&self) -> f32;
     fn set_scale(&mut self, scale: f32);
+    fn set_tint(&mut self, tint: Color);
 }
 
 pub trait Spatial {
@@ -79,7 +80,13 @@ impl Drawable for GameObject {
     }
     fn set_scale(&mut self, scale: f32) {
         if let Some(s) = self.sprite.as_mut() {
-            s.set_scale(scale)
+            s.set_scale(scale);
+        }
+    }
+
+    fn set_tint(&mut self, tint: Color) {
+        if let Some(s) = self.sprite.as_mut() {
+            s.set_tint(tint);
         }
     }
 }

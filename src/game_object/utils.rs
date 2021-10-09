@@ -34,6 +34,10 @@ macro_rules! impl_drawable {
             fn set_scale(&mut self, scale: f32) {
                 self.game_object.set_scale(scale);
             }
+
+            fn set_tint(&mut self, tint: Color) {
+                self.game_object.set_tint(tint);
+            }
         }
     };
 }

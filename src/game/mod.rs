@@ -38,6 +38,8 @@ pub struct Game {
     font: WeakFont,
     asteroid_tex_ref: Rc<RefCell<WeakTexture2D>>,
     gate_tex_ref: Rc<RefCell<WeakTexture2D>>,
+    gate_count: u32,
+    next_gate: u32,
 }
 
 impl Game {
@@ -117,6 +119,8 @@ impl Game {
             font,
             asteroid_tex_ref,
             gate_tex_ref,
+            gate_count: 0,
+            next_gate: 0,
         }
     }
 
@@ -140,19 +144,34 @@ impl Game {
             planets_vector.push((vector![pos.x, pos.y], mass));
         }
 
+        // Pre physics
         for object in self.phys_objects.iter_mut() {
             let body = &mut self.rigid_body_set[*object.borrow().get_body()];
+            // Apply gravity
+            let mut gravity_force = vector![0., 0.];
             for planet_v in planets_vector.iter() {
                 let dir = planet_v.0 - body.translation();
-                let force = dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
-                body.apply_force(force * body.mass(), true);
+                gravity_force += dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
             }
+            body.apply_force(gravity_force * body.mass(), true);
             object.borrow_mut().physics_process(delta, body);
         }
 
         // Physics
         self.physics_server
             .step(&mut self.rigid_body_set, &mut self.collider_set);
+
+        if self.physics_server.player_intersected {
+            if let Some(col_h) = self.physics_server.last_intersected {
+                let body_h = &self.collider_set[col_h].parent();
+                if let Some(body_h) = body_h {
+                    let body = &self.rigid_body_set[*body_h];
+                    if body.user_data == self.next_gate.into() {
+                        self.next_gate += 1;
+                    }
+                }
+            }
+        }
 
         for object in self.phys_objects.iter_mut() {
             let body = &self.rigid_body_set[*object.borrow().get_body()];
@@ -178,7 +197,16 @@ impl Game {
 
             // Render gates first
             for gate in self.gate_objects.iter() {
-                gate.borrow().draw(&mut mode);
+                use std::cmp::Ordering;
+
+                let mut gate = gate.borrow_mut();
+                let color =match gate.gate_num.cmp(&self.next_gate) {
+                    Ordering::Less => Color::GRAY,
+                    Ordering::Equal => HIGHLIGHT_COLOR,
+                    Ordering::Greater => Color::WHITE,
+                };
+                gate.set_tint(color);
+                gate.draw(&mut mode);
             }
 
             // Rendering objects
@@ -224,6 +252,16 @@ impl Game {
                 Color::WHITE,
             );
         }
+
+        // Draw player score
+        d.draw_text_ex(
+            &self.font,
+            &self.next_gate.to_string(),
+            Vector2 { x: 0.0, y: 50.0 },
+            50.0,
+            1.0,
+            Color::GREEN,
+        );
     }
 
     pub fn run(&mut self) {
@@ -246,19 +284,23 @@ impl Game {
 
         let rigid_body = RigidBodyBuilder::new_dynamic()
             .translation(position)
+            .can_sleep(false)
             .build();
         let collider = ColliderBuilder::capsule_y(20.0, 20.0)
             .position(Isometry::new(vector![0., 0.0], 0.0))
+            .active_events(ActiveEvents::INTERSECTION_EVENTS)
             .build();
 
         player.update_state(&rigid_body);
 
         let player_body_handle = self.rigid_body_set.insert(rigid_body);
-        self.collider_set.insert_with_parent(
+        let player_col_handle = self.collider_set.insert_with_parent(
             collider,
             player_body_handle,
             &mut self.rigid_body_set,
         );
+        self.physics_server.player_collider_handle = Some(player_col_handle);
+
         player.set_body(player_body_handle);
 
         let player_rc = Rc::new(RefCell::new(player));
@@ -281,8 +323,14 @@ impl Game {
                 asteroid.sprite = Some(Sprite::new(self.asteroid_tex_ref.clone(), true, 0.3));
                 let pos = vector![60. * i as f32, 50. * j as f32];
 
-                let mut rigid_body = RigidBodyBuilder::new_dynamic().translation(pos).build();
-                let collider = ColliderBuilder::capsule_y(0.0, 13.0).restitution(0.8).density(0.5).build();
+                let mut rigid_body = RigidBodyBuilder::new_dynamic()
+                    .translation(pos)
+                    .can_sleep(false)
+                    .build();
+                let collider = ColliderBuilder::capsule_y(0.0, 13.0)
+                    .restitution(0.8)
+                    .density(0.5)
+                    .build();
 
                 let mut vel = center - pos;
                 vel.normalize_mut();
@@ -309,7 +357,10 @@ impl Game {
     pub fn spawn_planet(&mut self, position: NVector2, radius: f32) {
         let mut planet = Planet::new(to_rv2(position), 0., radius);
 
-        let rigid_body = RigidBodyBuilder::new_static().translation(position).build();
+        let rigid_body = RigidBodyBuilder::new_static()
+            .translation(position)
+            .can_sleep(false)
+            .build();
         let collider = ColliderBuilder::ball(radius).density(5.0).build();
 
         let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
@@ -326,12 +377,19 @@ impl Game {
     /// Spawn a gate at given position
     pub fn spawn_gate(&mut self, position: NVector2) {
         let mut gate = Gate::new(self.gate_tex_ref.clone());
+        gate.gate_num = self.gate_count;
 
         let width = 15.0;
         let height = 115.0;
 
-        let rigid_body = RigidBodyBuilder::new_static().translation(position).build();
-        let area_collider = ColliderBuilder::cuboid(width, height).sensor(true).build();
+        let rigid_body = RigidBodyBuilder::new_static()
+            .translation(position)
+            .can_sleep(false)
+            .user_data(self.gate_count.into())
+            .build();
+        let area_collider = ColliderBuilder::cuboid(width * 0.5, height)
+            .sensor(true)
+            .build();
         let gate_collider_1 = ColliderBuilder::ball(width)
             .translation(vector![0., height])
             .build();
@@ -362,5 +420,7 @@ impl Game {
         let gate_rc = Rc::new(RefCell::new(gate));
         self.phys_objects.push(gate_rc.clone());
         self.gate_objects.push(gate_rc);
+
+        self.gate_count += 1;
     }
 }

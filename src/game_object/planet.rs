@@ -62,6 +62,8 @@ impl Drawable for Planet {
 
     #[allow(unused_variables)]
     fn set_scale(&mut self, scale: f32) {}
+    #[allow(unused_variables)]
+    fn set_tint(&mut self, tint: Color) {}
 }
 
 impl PhysicsObject for Planet {
