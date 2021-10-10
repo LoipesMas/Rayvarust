@@ -141,7 +141,8 @@ impl<'a> Game<'a> {
         if self.rl.is_window_resized() {
             let window_width = self.rl.get_screen_width();
             let window_height = self.rl.get_screen_height();
-            self.camera.offset = Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0);
+            self.camera.offset =
+                Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0);
         }
 
         // For debug
@@ -286,10 +287,15 @@ impl<'a> Game<'a> {
             );
         }
 
+        let mut score_text = self.next_gate.to_string();
+        if self.next_gate >= self.gate_count {
+            score_text = "Complete!".to_string();
+        }
+
         // Draw player score
         d.draw_text_ex(
             &self.font,
-            &self.next_gate.to_string(),
+            &score_text,
             Vector2 { x: 0.0, y: 50.0 },
             50.0,
             1.0,
@@ -463,15 +469,50 @@ impl<'a> Game<'a> {
 
         let mut rng = thread_rng();
 
+        let direction = (rng.gen::<f32>() - 0.5).signum();
+
         let start_angle = rng.gen::<f32>() * PI;
 
         let angle_step = 2.0 * PI / (5.0 + rng.gen::<f32>() * 2.0);
         for i in 0..gate_count {
             let gate_offset: f32 = radius * (rng.gen::<f32>() + 1.4);
-            let rot = Rotation::new(start_angle + angle_step * i as f32);
+            let rot = Rotation::new(start_angle + angle_step * direction * i as f32);
             let offset = rot.into_inner() * gate_offset;
             let pos = vector![offset.re, offset.im] + position;
-            self.spawn_gate(pos, rot.angle() + PI/2.0);
+            self.spawn_gate(pos, rot.angle() + PI / 2.0);
+        }
+    }
+
+    /// Spawns many planets at random positions with gates around them
+    pub fn spawn_many_planets_with_gates(&mut self, num_planets: u16) {
+        use std::f32::consts::PI;
+        // TODO: Check if planet not too close to other planets
+        let planets: Vec<(NVector2, f32)> = Vec::new();
+
+        let radius_range = 300.0..700.0;
+
+        let mut rng = thread_rng();
+
+        let mut last_position: NVector2 = vector![0., 0.];
+        let mut last_radius = 0.;
+        for _i in 0..num_planets {
+            let radius = rng.gen_range(radius_range.clone());
+            let distance = (last_radius + radius) * (3.0 + rng.gen::<f32>());
+            let angle = rng.gen::<f32>() * PI;
+            let rot = Rotation::new(angle);
+            let offset = rot.into_inner() * distance;
+            let pos = vector![offset.re, offset.im] + last_position;
+
+            // Check if planet too close to other planets
+            // ...
+            // If so, get new angle and try again lol
+
+            let gate_count =
+                ((rng.gen_range(1..6) + rng.gen_range(1..6)) as f32 * 0.5).ceil() as u8;
+            self.spawn_planet_with_gates(pos, radius, gate_count);
+
+            last_radius = radius;
+            last_position = pos;
         }
     }
 }

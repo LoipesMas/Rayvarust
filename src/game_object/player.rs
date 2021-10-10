@@ -25,7 +25,7 @@ impl Player {
 
         Player {
             game_object,
-            lin_speed: 40.0,
+            lin_speed: 70.0,
             ang_speed: 1.0,
             move_vec: NVector2::zeros(),
             rot: 0.0,

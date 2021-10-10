@@ -1,10 +1,8 @@
 # TODO
 
-- Planets
+- Different color planets
+- Score (not hitting things = good)
+- Lava planets? (touch = die)
+- Fuel Mode?
 - Some graphics
-- Hoops
-
-# Ideas
-
-Planets, gravity, simulation
-Flying through hoops around planets, avoiding asteroids
+- Readme
