@@ -19,9 +19,9 @@ const COLL_COLOR: Color = Color {
 
 const G: f32 = 10.0;
 
-pub struct Game {
-    rl: RaylibHandle,
-    thread: RaylibThread,
+pub struct Game<'a> {
+    rl: &'a mut RaylibHandle,
+    thread: &'a RaylibThread,
     draw_fps: bool,
     draw_collisions: bool,
     bg_color: Color,
@@ -34,47 +34,45 @@ pub struct Game {
     planet_objects: Vec<Rc<RefCell<Planet>>>,
     gate_objects: Vec<Rc<RefCell<Gate>>>,
     player_rc: Option<Rc<RefCell<Player>>>,
+    player_tex: WeakTexture2D,
     camera: Camera2D,
-    font: WeakFont,
-    asteroid_tex_ref: Rc<RefCell<WeakTexture2D>>,
-    gate_tex_ref: Rc<RefCell<WeakTexture2D>>,
+    font: Font,
+    asteroid_tex: WeakTexture2D,
+    gate_tex: WeakTexture2D,
     gate_count: u32,
     next_gate: u32,
 }
 
-impl Game {
-    pub fn new() -> Self {
-        let window_width: i16 = 960 * 2;
-        let window_height: i16 = 540 * 2;
+impl<'a> Game<'a> {
+    pub fn new(
+        rl: &'a mut RaylibHandle,
+        thread: &'a RaylibThread,
+        window_width: i16,
+        window_height: i16,
+    ) -> Self {
         let draw_fps = true;
         let draw_collisions = false;
 
-        let (mut rl, thread) = raylib::init()
-            .size(window_width.into(), window_height.into())
-            .title("Rayvarust")
-            .fullscreen()
-            .vsync()
-            .build();
-
         let font = rl
-            .load_font(&thread, "resources/fonts/RobotoMono-Regular.ttf")
-            .expect("Couldn't load font")
-            .make_weak();
+            .load_font(thread, "resources/fonts/RobotoMono-Regular.ttf")
+            .expect("Couldn't load font");
 
-        let asteroid_tex_ref = unsafe {
-            let asteroid_tex = rl
-                .load_texture(&thread, "resources/textures/asteroid.png")
-                .expect("Couldn't load asteroid.png")
-                .make_weak();
-            Rc::new(RefCell::new(asteroid_tex))
+        let player_tex = unsafe {
+            rl.load_texture(thread, "resources/textures/spaceship.png")
+                .expect("Couldn't load spaceship.png")
+                .make_weak()
         };
 
-        let gate_tex_ref = unsafe {
-            let gate_tex = rl
-                .load_texture(&thread, "resources/textures/gate.png")
+        let asteroid_tex = unsafe {
+            rl.load_texture(thread, "resources/textures/asteroid.png")
+                .expect("Couldn't load asteroid.png")
+                .make_weak()
+        };
+
+        let gate_tex = unsafe {
+            rl.load_texture(thread, "resources/textures/gate.png")
                 .expect("Couldn't load gate.png")
-                .make_weak();
-            Rc::new(RefCell::new(gate_tex))
+                .make_weak()
         };
 
         let bg_color = color::rcolor(47, 40, 70, 255);
@@ -115,12 +113,22 @@ impl Game {
             planet_objects,
             gate_objects,
             player_rc: None,
+            player_tex,
             camera,
             font,
-            asteroid_tex_ref,
-            gate_tex_ref,
+            asteroid_tex,
+            gate_tex,
             gate_count: 0,
             next_gate: 0,
+        }
+    }
+
+    pub fn unload(&mut self) {
+        unsafe {
+            self.rl.unload_texture(self.thread, self.player_tex.clone());
+            self.rl
+                .unload_texture(self.thread, self.asteroid_tex.clone());
+            self.rl.unload_texture(self.thread, self.gate_tex.clone());
         }
     }
 
@@ -189,7 +197,7 @@ impl Game {
         }
 
         // Drawing
-        let mut d = self.rl.begin_drawing(&self.thread);
+        let mut d = self.rl.begin_drawing(self.thread);
 
         {
             let mut mode = d.begin_mode2D(self.camera);
@@ -200,7 +208,7 @@ impl Game {
                 use std::cmp::Ordering;
 
                 let mut gate = gate.borrow_mut();
-                let color =match gate.gate_num.cmp(&self.next_gate) {
+                let color = match gate.gate_num.cmp(&self.next_gate) {
                     Ordering::Less => Color::GRAY,
                     Ordering::Equal => HIGHLIGHT_COLOR,
                     Ordering::Greater => Color::WHITE,
@@ -271,16 +279,7 @@ impl Game {
     }
 
     pub fn spawn_player(&mut self, position: NVector2) {
-        let player_tex_ref = unsafe {
-            let player_tex = self
-                .rl
-                .load_texture(&self.thread, "resources/textures/spaceship.png")
-                .expect("Couldn't load spaceship.png")
-                .make_weak();
-            Rc::new(RefCell::new(player_tex))
-        };
-
-        let mut player = Player::new(player_tex_ref);
+        let mut player = Player::new(self.player_tex.clone());
 
         let rigid_body = RigidBodyBuilder::new_dynamic()
             .translation(position)
@@ -320,7 +319,7 @@ impl Game {
         for i in 0..10 {
             for j in 0..10 {
                 let mut asteroid = GameObject::new();
-                asteroid.sprite = Some(Sprite::new(self.asteroid_tex_ref.clone(), true, 0.3));
+                asteroid.sprite = Some(Sprite::new(self.asteroid_tex.clone(), true, 0.3));
                 let pos = vector![60. * i as f32, 50. * j as f32];
 
                 let mut rigid_body = RigidBodyBuilder::new_dynamic()
@@ -376,7 +375,7 @@ impl Game {
 
     /// Spawn a gate at given position
     pub fn spawn_gate(&mut self, position: NVector2) {
-        let mut gate = Gate::new(self.gate_tex_ref.clone());
+        let mut gate = Gate::new(self.gate_tex.clone());
         gate.gate_num = self.gate_count;
 
         let width = 15.0;

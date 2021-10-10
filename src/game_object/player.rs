@@ -4,9 +4,6 @@ use crate::{impl_drawable, impl_spatial};
 
 use raylib::prelude::*;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::math::NVector2;
 
 use rapier2d::prelude::*;
@@ -22,7 +19,7 @@ pub struct Player {
 
 #[allow(dead_code)]
 impl Player {
-    pub fn new(texture: Rc<RefCell<WeakTexture2D>>) -> Self {
+    pub fn new(texture: WeakTexture2D) -> Self {
         let mut game_object = GameObject::new();
         game_object.sprite = Some(Sprite::new(texture, true, 0.7));
 

@@ -2,11 +2,9 @@ use crate::math::Transform2D;
 use crate::Rectangle;
 use crate::Vector2;
 use raylib::prelude::*;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub struct Sprite {
-    texture: Rc<RefCell<WeakTexture2D>>,
+    texture: WeakTexture2D,
     pub tint: Color,
     scale: f32,
     source_rec: Rectangle,
@@ -17,7 +15,7 @@ pub struct Sprite {
 
 #[allow(dead_code)]
 impl Sprite {
-    pub fn new(texture: Rc<RefCell<WeakTexture2D>>, centered: bool, scale: f32) -> Sprite {
+    pub fn new(texture: WeakTexture2D, centered: bool, scale: f32) -> Sprite {
         let (source_rec, dest_rec) = Sprite::get_recs(&texture, scale);
         let mut sprite = Sprite {
             texture,
@@ -33,28 +31,26 @@ impl Sprite {
         sprite
     }
 
-    fn get_recs(texture: &Rc<RefCell<WeakTexture2D>>, scale: f32) -> (Rectangle, Rectangle) {
-        let tex = texture.as_ref().borrow();
-        let source_rec = Rectangle::new(0.0, 0.0, tex.width as f32, tex.height as f32);
+    fn get_recs(texture: &WeakTexture2D, scale: f32) -> (Rectangle, Rectangle) {
+        let source_rec = Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
         let dest_rec = Rectangle::new(
             0.0,
             0.0,
-            scale * tex.width as f32,
-            scale * tex.height as f32,
+            scale * texture.width as f32,
+            scale * texture.height as f32,
         );
 
         (source_rec, dest_rec)
     }
 
-    pub fn set_texture(&mut self, texture: Rc<RefCell<WeakTexture2D>>) {
+    pub fn set_texture(&mut self, texture: WeakTexture2D) {
         {
-            let tex = texture.as_ref().borrow();
-            self.source_rec = Rectangle::new(0.0, 0.0, tex.width as f32, tex.height as f32);
+            self.source_rec = Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
             self.dest_rec = Rectangle::new(
                 0.0,
                 0.0,
-                self.scale * tex.width as f32,
-                self.scale * tex.height as f32,
+                self.scale * texture.width as f32,
+                self.scale * texture.height as f32,
             );
         }
 
@@ -71,12 +67,9 @@ impl Sprite {
     }
 
     pub fn set_scale(&mut self, scale: f32) {
-        {
-            let tex = self.texture.as_ref().borrow();
-            self.scale = scale;
-            self.dest_rec.width = self.scale * tex.width as f32;
-            self.dest_rec.height = self.scale * tex.height as f32;
-        }
+        self.scale = scale;
+        self.dest_rec.width = self.scale * self.texture.width as f32;
+        self.dest_rec.height = self.scale * self.texture.height as f32;
         self.update_origin();
     }
 
@@ -85,10 +78,9 @@ impl Sprite {
     }
 
     fn update_origin(&mut self) {
-        let tex = self.texture.as_ref().borrow();
         if self.centered {
-            self.origin.x = tex.width as f32 * self.scale * 0.5;
-            self.origin.y = tex.height as f32 * self.scale * 0.5;
+            self.origin.x = self.texture.width as f32 * self.scale * 0.5;
+            self.origin.y = self.texture.height as f32 * self.scale * 0.5;
         } else {
             self.origin.x = 0.0;
             self.origin.y = 0.0;
@@ -96,13 +88,12 @@ impl Sprite {
     }
 
     pub fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>, transform: &Transform2D) {
-        let tex = &*self.texture.borrow();
         let mut dest_rec = self.dest_rec;
         dest_rec.x = transform.position.x;
         dest_rec.y = transform.position.y;
 
         rl.draw_texture_pro(
-            tex,
+            &self.texture,
             self.source_rec,
             dest_rec,
             self.origin,
