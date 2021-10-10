@@ -11,6 +11,9 @@ macro_rules! impl_spatial {
             fn get_rotation(&self) -> f32 {
                 self.game_object.get_rotation()
             }
+            fn set_rotation(&mut self, rotation: f32) {
+                self.game_object.set_rotation(rotation);
+            }
 
             fn translate(&mut self, vector: Vector2) {
                 self.set_position(self.get_position() + vector);

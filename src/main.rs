@@ -20,18 +20,12 @@ fn main() {
 
     let mut the_game = Game::new(&mut rl, &thread, window_width, window_height);
 
-    the_game.spawn_planet(vector![500., -1400.], 400.);
-    the_game.spawn_planet(vector![800., 2300.], 600.);
-
-    the_game.spawn_gate(vector![0., 0.0]);
+    the_game.spawn_planet_with_gates(vector![500., -1400.], 400., 3);
+    the_game.spawn_planet_with_gates(vector![800., 2300.], 600., 5);
 
     the_game.spawn_asteroids();
 
-    the_game.spawn_player(vector![100., 0.]);
-
-    the_game.spawn_gate(vector![-300., 0.0]);
-
-    the_game.spawn_gate(vector![-500., 0.0]);
+    the_game.spawn_player(vector![0., 0.]);
 
     the_game.run();
 

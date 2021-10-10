@@ -402,7 +402,7 @@ impl<'a> Game<'a> {
     }
 
     /// Spawn a gate at given position
-    pub fn spawn_gate(&mut self, position: NVector2) {
+    pub fn spawn_gate(&mut self, position: NVector2, rotation: f32) {
         let mut gate = Gate::new(self.gate_tex.clone());
         gate.gate_num = self.gate_count;
 
@@ -413,7 +413,9 @@ impl<'a> Game<'a> {
             .translation(position)
             .can_sleep(false)
             .user_data(self.gate_count.into())
+            .rotation(rotation)
             .build();
+
         let area_collider = ColliderBuilder::cuboid(width * 0.5, height)
             .sensor(true)
             .build();
@@ -449,5 +451,27 @@ impl<'a> Game<'a> {
         self.gate_objects.push(gate_rc);
 
         self.gate_count += 1;
+    }
+
+    /// Spawns a planet with gates around it
+    pub fn spawn_planet_with_gates(&mut self, position: NVector2, radius: f32, gate_count: u8) {
+        use std::f32::consts::PI;
+
+        assert!(gate_count < 6, "Gate count must be less than 6");
+
+        self.spawn_planet(position, radius);
+
+        let mut rng = thread_rng();
+
+        let start_angle = rng.gen::<f32>() * PI;
+
+        let angle_step = 2.0 * PI / (5.0 + rng.gen::<f32>() * 2.0);
+        for i in 0..gate_count {
+            let gate_offset: f32 = radius * (rng.gen::<f32>() + 1.4);
+            let rot = Rotation::new(start_angle + angle_step * i as f32);
+            let offset = rot.into_inner() * gate_offset;
+            let pos = vector![offset.re, offset.im] + position;
+            self.spawn_gate(pos, rot.angle() + PI/2.0);
+        }
     }
 }

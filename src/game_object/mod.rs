@@ -50,6 +50,7 @@ pub trait Spatial {
     fn get_position(&self) -> Vector2;
     fn set_position(&mut self, position: Vector2);
     fn get_rotation(&self) -> f32;
+    fn set_rotation(&mut self, rotation: f32);
     fn translate(&mut self, vector: Vector2);
 }
 
@@ -104,6 +105,9 @@ impl Spatial for GameObject {
         self.transform.rotation
     }
 
+    fn set_rotation(&mut self, rotation: f32) {
+        self.transform.rotation = rotation;
+    }
     fn translate(&mut self, vector: Vector2) {
         self.set_position(self.transform.position + vector);
     }
