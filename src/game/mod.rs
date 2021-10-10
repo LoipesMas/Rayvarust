@@ -9,6 +9,8 @@ use crate::game_object::*;
 mod physics_server;
 use physics_server::*;
 
+use rand::prelude::*;
+
 /// Color of debug collider
 const COLL_COLOR: Color = Color {
     r: 70,
@@ -135,6 +137,14 @@ impl<'a> Game<'a> {
     pub fn step(&mut self) {
         let delta = self.rl.get_frame_time();
 
+        // Update camera center
+        if self.rl.is_window_resized() {
+            let window_width = self.rl.get_screen_width();
+            let window_height = self.rl.get_screen_height();
+            self.camera.offset = Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0);
+        }
+
+        // For debug
         if self.rl.is_key_pressed(KeyboardKey::KEY_B) {
             self.draw_collisions ^= true;
         }
@@ -155,13 +165,15 @@ impl<'a> Game<'a> {
         // Pre physics
         for object in self.phys_objects.iter_mut() {
             let body = &mut self.rigid_body_set[*object.borrow().get_body()];
-            // Apply gravity
+            // Calculate gravity
             let mut gravity_force = vector![0., 0.];
             for planet_v in planets_vector.iter() {
                 let dir = planet_v.0 - body.translation();
                 gravity_force += dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
             }
+            // Apply gravity
             body.apply_force(gravity_force * body.mass(), true);
+            // Call objects physics process
             object.borrow_mut().physics_process(delta, body);
         }
 
@@ -169,36 +181,46 @@ impl<'a> Game<'a> {
         self.physics_server
             .step(&mut self.rigid_body_set, &mut self.collider_set);
 
+        // When player goes through a gate
         if self.physics_server.player_intersected {
+            // Get collider
             if let Some(col_h) = self.physics_server.last_intersected {
+                // Get body
                 let body_h = &self.collider_set[col_h].parent();
                 if let Some(body_h) = body_h {
+                    // Check if gate number is the one that player should go through
                     let body = &self.rigid_body_set[*body_h];
                     if body.user_data == self.next_gate.into() {
+                        // "Select" next gate
                         self.next_gate += 1;
                     }
                 }
             }
         }
 
+        // Update state of all physics objects
+        // (This makes their position and rotation the same as their rigidbodies')
         for object in self.phys_objects.iter_mut() {
             let body = &self.rigid_body_set[*object.borrow().get_body()];
             object.borrow_mut().update_state(body);
         }
 
+        // Camera follows player
         if let Some(player_rc) = &self.player_rc {
             self.camera.target = to_rv2(lerp(
                 to_nv2(self.camera.target),
                 to_nv2(player_rc.borrow().get_position()),
-                0.17,
+                0.15,
             ));
             self.camera.rotation = -player_rc.borrow().get_rotation() * RAD2DEG as f32;
+            // Player controls zoom
             self.camera.zoom = player_rc.borrow().get_zoom();
         }
 
         // Drawing
         let mut d = self.rl.begin_drawing(self.thread);
 
+        // Camera mode
         {
             let mut mode = d.begin_mode2D(self.camera);
             mode.clear_background(self.bg_color);
@@ -208,12 +230,15 @@ impl<'a> Game<'a> {
                 use std::cmp::Ordering;
 
                 let mut gate = gate.borrow_mut();
+
+                // Color based on whether the gate is past/current/future
                 let color = match gate.gate_num.cmp(&self.next_gate) {
                     Ordering::Less => Color::GRAY,
                     Ordering::Equal => HIGHLIGHT_COLOR,
                     Ordering::Greater => Color::WHITE,
                 };
                 gate.set_tint(color);
+
                 gate.draw(&mut mode);
             }
 
@@ -222,7 +247,7 @@ impl<'a> Game<'a> {
                 object.borrow().draw(&mut mode);
             }
 
-            // Draw collision
+            // Draw collisions
             if self.draw_collisions {
                 for object in self.phys_objects.iter() {
                     let body = &self.rigid_body_set[*object.borrow().get_body()];
@@ -272,13 +297,16 @@ impl<'a> Game<'a> {
         );
     }
 
+    /// Run the game
     pub fn run(&mut self) {
         while !self.rl.window_should_close() {
             self.step()
         }
     }
 
+    /// Spawn player
     pub fn spawn_player(&mut self, position: NVector2) {
+        assert!(self.player_rc.is_none(), "Can't spawn second player");
         let mut player = Player::new(self.player_tex.clone());
 
         let rigid_body = RigidBodyBuilder::new_dynamic()

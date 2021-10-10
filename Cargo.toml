@@ -7,6 +7,7 @@ authors = ["LoipesMas"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rand = "0.8.4"
 raylib = "3.5"
 rapier2d = { version = "0.11.1", features = [ "simd-stable" ] }
 
