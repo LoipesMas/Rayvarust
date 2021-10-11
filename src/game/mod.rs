@@ -306,14 +306,14 @@ impl<'a> Game<'a> {
         );
     }
 
-    /// Run the game
+    /// Runs the game
     pub fn run(&mut self) {
         while !self.rl.window_should_close() {
             self.step()
         }
     }
 
-    /// Spawn player
+    /// Spawns player
     pub fn spawn_player(&mut self, position: NVector2) {
         assert!(self.player_rc.is_none(), "Can't spawn second player");
         let mut player = Player::new(self.player_tex.clone());
@@ -389,9 +389,9 @@ impl<'a> Game<'a> {
         }
     }
 
-    /// Spawn a planet at given position with given radius
-    pub fn spawn_planet(&mut self, position: NVector2, radius: f32) {
-        let mut planet = Planet::new(to_rv2(position), 0., radius);
+    /// Spawns a planet at given position with given radius
+    pub fn spawn_planet(&mut self, position: NVector2, radius: f32, color: Color) {
+        let mut planet = Planet::new(to_rv2(position), 0., radius, color);
 
         let rigid_body = RigidBodyBuilder::new_static()
             .translation(position)
@@ -410,7 +410,7 @@ impl<'a> Game<'a> {
         self.planet_objects.push(planet_rc);
     }
 
-    /// Spawn a gate at given position
+    /// Spawns a gate at given position
     pub fn spawn_gate(&mut self, position: NVector2, rotation: f32) {
         let mut gate = Gate::new(self.gate_tex.clone());
         gate.gate_num = self.gate_count;
@@ -425,7 +425,7 @@ impl<'a> Game<'a> {
             .rotation(rotation)
             .build();
 
-        let area_collider = ColliderBuilder::cuboid(width * 0.5, height)
+        let area_collider = ColliderBuilder::cuboid(width * 0.3, height)
             .sensor(true)
             .build();
         let gate_collider_1 = ColliderBuilder::ball(width)
@@ -468,9 +468,14 @@ impl<'a> Game<'a> {
 
         assert!(gate_count < 6, "Gate count must be less than 6");
 
-        self.spawn_planet(position, radius);
-
         let mut rng = thread_rng();
+
+        let hue = rng.gen::<f32>() * 250.;
+        let sat = rng.gen::<f32>() * 0.5 + 0.5;
+        let color = Color::color_from_hsv(hue, sat, 0.7);
+
+        self.spawn_planet(position, radius, color);
+
 
         let direction = (rng.gen::<f32>() - 0.5).signum();
 
@@ -478,7 +483,7 @@ impl<'a> Game<'a> {
 
         let angle_step = 2.0 * PI / (5.0 + rng.gen::<f32>() * 2.0);
         for i in 0..gate_count {
-            let gate_offset: f32 = radius * (rng.gen::<f32>() + 1.4);
+            let gate_offset: f32 = radius * (rng.gen::<f32>() + 1.2) + 100.;
             let rot = Rotation::new(start_angle + angle_step * direction * i as f32);
             let offset = rot.into_inner() * gate_offset;
             let pos = vector![offset.re, offset.im] + position;
@@ -489,8 +494,7 @@ impl<'a> Game<'a> {
     /// Spawns many planets at random positions with gates around them
     pub fn spawn_many_planets_with_gates(&mut self, num_planets: u16) {
         use std::f32::consts::PI;
-        // TODO: Check if planet not too close to other planets
-        let planets: Vec<(NVector2, f32)> = Vec::new();
+        let mut planets: Vec<(NVector2, f32)> = Vec::new();
 
         let radius_range = 300.0..700.0;
 
@@ -499,20 +503,32 @@ impl<'a> Game<'a> {
         let mut last_position: NVector2 = vector![0., 0.];
         let mut last_radius = 0.;
         for _i in 0..num_planets {
+            let mut position_valid = false;
             let radius = rng.gen_range(radius_range.clone());
             let distance = (last_radius + radius) * (3.0 + rng.gen::<f32>());
-            let angle = rng.gen::<f32>() * PI;
-            let rot = Rotation::new(angle);
-            let offset = rot.into_inner() * distance;
-            let pos = vector![offset.re, offset.im] + last_position;
+            let mut pos : NVector2 = vector![0., 0.];
+            while !position_valid {
+                let angle = rng.gen::<f32>() * PI;
+                let rot = Rotation::new(angle);
+                let offset = rot.into_inner() * distance;
+                pos = vector![offset.re, offset.im] + last_position;
 
-            // Check if planet too close to other planets
-            // ...
-            // If so, get new angle and try again lol
+                // Check if planet too close to other planets
+                position_valid = true;
+                for planet in planets.iter() {
+                    let dist = (pos - planet.0).norm();
+                    let min_dist = (radius + planet.1) * 2.8;
+                    if dist < min_dist {
+                        position_valid = false;
+                        break;
+                    }
+                }
+            }
 
             let gate_count =
                 ((rng.gen_range(1..6) + rng.gen_range(1..6)) as f32 * 0.5).ceil() as u8;
             self.spawn_planet_with_gates(pos, radius, gate_count);
+            planets.push((pos, radius));
 
             last_radius = radius;
             last_position = pos;

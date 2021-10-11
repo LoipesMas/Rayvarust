@@ -11,11 +11,12 @@ pub struct Planet {
     radius: f32,
     physics_body: Option<RigidBodyHandle>,
     mass: f32,
+    color: Color,
 }
 
 impl Planet {
     #[allow(dead_code)]
-    pub fn new(position: Vector2, rotation: f32, radius: f32) -> Self {
+    pub fn new(position: Vector2, rotation: f32, radius: f32, color: Color) -> Self {
         let transform = Transform2D { position, rotation };
 
         Planet {
@@ -23,6 +24,7 @@ impl Planet {
             radius,
             physics_body: None,
             mass: 0.,
+            color,
         }
     }
 
@@ -54,7 +56,7 @@ impl Drawable for Planet {
         rl.draw_circle_v(
             self.get_position(),
             self.radius,
-            Color::new(80, 200, 120, 255),
+            self.color,
         );
     }
 
