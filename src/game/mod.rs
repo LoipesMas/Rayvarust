@@ -166,14 +166,17 @@ impl<'a> Game<'a> {
         // Pre physics
         for object in self.phys_objects.iter_mut() {
             let body = &mut self.rigid_body_set[*object.borrow().get_body()];
-            // Calculate gravity
-            let mut gravity_force = vector![0., 0.];
-            for planet_v in planets_vector.iter() {
-                let dir = planet_v.0 - body.translation();
-                gravity_force += dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
+            // Only calculate gravity for dynamic objects
+            if body.is_dynamic() {
+                // Calculate gravity
+                let mut gravity_force = vector![0., 0.];
+                for planet_v in planets_vector.iter() {
+                    let dir = planet_v.0 - body.translation();
+                    gravity_force += dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
+                }
+                // Apply gravity
+                body.apply_force(gravity_force * body.mass(), true);
             }
-            // Apply gravity
-            body.apply_force(gravity_force * body.mass(), true);
             // Call objects physics process
             object.borrow_mut().physics_process(delta, body);
         }
