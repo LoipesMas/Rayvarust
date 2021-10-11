@@ -53,11 +53,7 @@ impl Spatial for Planet {
 
 impl Drawable for Planet {
     fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>) {
-        rl.draw_circle_v(
-            self.get_position(),
-            self.radius,
-            self.color,
-        );
+        rl.draw_circle_v(self.get_position(), self.radius, self.color);
     }
 
     fn get_scale(&self) -> f32 {

@@ -43,6 +43,8 @@ pub struct Game<'a> {
     gate_tex: WeakTexture2D,
     gate_count: u32,
     next_gate: u32,
+    arrow: GameObject,
+    arrow_tex: WeakTexture2D,
 }
 
 impl<'a> Game<'a> {
@@ -77,6 +79,12 @@ impl<'a> Game<'a> {
                 .make_weak()
         };
 
+        let arrow_tex = unsafe {
+            rl.load_texture(thread, "resources/textures/arrow.png")
+                .expect("Couldn't load arrow.png")
+                .make_weak()
+        };
+
         let bg_color = color::rcolor(47, 40, 70, 255);
 
         // Initialize physics
@@ -100,6 +108,9 @@ impl<'a> Game<'a> {
 
         rl.hide_cursor();
 
+        let mut arrow = GameObject::new();
+        arrow.sprite = Some(Sprite::new(arrow_tex.clone(), true, 1.));
+
         Game {
             rl,
             thread,
@@ -122,6 +133,8 @@ impl<'a> Game<'a> {
             gate_tex,
             gate_count: 0,
             next_gate: 0,
+            arrow,
+            arrow_tex,
         }
     }
 
@@ -131,6 +144,7 @@ impl<'a> Game<'a> {
             self.rl
                 .unload_texture(self.thread, self.asteroid_tex.clone());
             self.rl.unload_texture(self.thread, self.gate_tex.clone());
+            self.rl.unload_texture(self.thread, self.arrow_tex.clone());
         }
     }
 
@@ -176,7 +190,8 @@ impl<'a> Game<'a> {
                     if dist > 7777.7 {
                         continue;
                     }
-                    gravity_force += dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
+                    gravity_force +=
+                        dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
                 }
                 // Apply gravity
                 body.apply_force(gravity_force * body.mass(), true);
@@ -253,6 +268,27 @@ impl<'a> Game<'a> {
             // Rendering objects
             for object in &self.draw_objects {
                 object.borrow().draw(&mut mode);
+            }
+
+            // Draw arrow to next gate
+            if self.next_gate < self.gate_count {
+                if let Some(player) = &self.player_rc {
+                    let player = player.borrow();
+                    let pl_pos = player.get_position();
+                    let next_pos = self
+                        .gate_objects
+                        .get(self.next_gate as usize)
+                        .unwrap()
+                        .borrow()
+                        .get_position();
+                    let dir = pl_pos - next_pos;
+                    if dir.length() > 512.0 {
+                        let angle = dir.angle_to(Vector2::new(-1., 0.));
+                        self.arrow.set_position(pl_pos);
+                        self.arrow.set_rotation(angle);
+                        self.arrow.draw(&mut mode);
+                    }
+                }
             }
 
             // Draw collisions
@@ -480,7 +516,6 @@ impl<'a> Game<'a> {
 
         self.spawn_planet(position, radius, color);
 
-
         let direction = (rng.gen::<f32>() - 0.5).signum();
 
         let start_angle = rng.gen::<f32>() * PI;
@@ -510,7 +545,7 @@ impl<'a> Game<'a> {
             let mut position_valid = false;
             let radius = rng.gen_range(radius_range.clone());
             let distance = (last_radius + radius) * (3.0 + rng.gen::<f32>());
-            let mut pos : NVector2 = vector![0., 0.];
+            let mut pos: NVector2 = vector![0., 0.];
             while !position_valid {
                 let angle = rng.gen::<f32>() * PI;
                 let rot = Rotation::new(angle);
