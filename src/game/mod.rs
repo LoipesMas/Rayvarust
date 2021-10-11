@@ -172,6 +172,10 @@ impl<'a> Game<'a> {
                 let mut gravity_force = vector![0., 0.];
                 for planet_v in planets_vector.iter() {
                     let dir = planet_v.0 - body.translation();
+                    let dist = dir.norm();
+                    if dist > 7777.7 {
+                        continue;
+                    }
                     gravity_force += dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
                 }
                 // Apply gravity
