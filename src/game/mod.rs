@@ -204,6 +204,15 @@ impl<'a> Game<'a> {
         self.physics_server
             .step(&mut self.rigid_body_set, &mut self.collider_set);
 
+        let mut contact_events = self.physics_server.event_handler.contact_events.lock().unwrap();
+        for event in contact_events.drain(..) {
+            if let ContactEvent::Started(col1, col2) = event {
+                if let Some(player) = &self.player_rc {
+                    player.borrow_mut().score -= 10;
+                }
+            }
+        }
+
         // When player goes through a gate
         if self.physics_server.player_intersected {
             // Get collider
@@ -216,6 +225,9 @@ impl<'a> Game<'a> {
                     if body.user_data == self.next_gate.into() {
                         // "Select" next gate
                         self.next_gate += 1;
+                        if let Some(player_rc) = &self.player_rc {
+                            player_rc.borrow_mut().score += 30;
+                        }
                     }
                 }
             }
@@ -331,20 +343,23 @@ impl<'a> Game<'a> {
             );
         }
 
-        let mut score_text = self.next_gate.to_string();
-        if self.next_gate >= self.gate_count {
-            score_text = "Complete!".to_string();
-        }
+        if let Some(player) = &self.player_rc {
+            let player = player.borrow();
+            let mut score_text = player.score.to_string();
+            //if self.next_gate >= self.gate_count {
+            //    score_text = "Complete!".to_string();
+            //}
 
-        // Draw player score
-        d.draw_text_ex(
-            &self.font,
-            &score_text,
-            Vector2 { x: 0.0, y: 50.0 },
-            50.0,
-            1.0,
-            Color::GREEN,
-        );
+            // Draw player score
+            d.draw_text_ex(
+                &self.font,
+                &score_text,
+                Vector2 { x: 0.0, y: 50.0 },
+                50.0,
+                1.0,
+                Color::GREEN,
+            );
+        }
     }
 
     /// Runs the game
@@ -365,7 +380,7 @@ impl<'a> Game<'a> {
             .build();
         let collider = ColliderBuilder::capsule_y(20.0, 20.0)
             .position(Isometry::new(vector![0., 0.0], 0.0))
-            .active_events(ActiveEvents::INTERSECTION_EVENTS)
+            .active_events(ActiveEvents::INTERSECTION_EVENTS | ActiveEvents::CONTACT_EVENTS)
             .build();
 
         player.update_state(&rigid_body);

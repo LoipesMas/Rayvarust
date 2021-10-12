@@ -15,6 +15,7 @@ pub struct Player {
     move_vec: NVector2, // add this to lin vel on next phys process
     rot: f32,           // add this to ang vel on next phys process
     zoom: f32,
+    pub score: i32,
 }
 
 #[allow(dead_code)]
@@ -30,6 +31,7 @@ impl Player {
             move_vec: NVector2::zeros(),
             rot: 0.0,
             zoom: 1.0,
+            score: 0,
         }
     }
     pub fn get_zoom(&self) -> f32 {

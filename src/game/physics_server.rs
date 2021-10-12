@@ -15,7 +15,7 @@ pub struct PhysicsServer {
     joint_set: JointSet,
     ccd_solver: CCDSolver,
     physics_hooks: (),
-    event_handler: MyEventHandler,
+    pub event_handler: MyEventHandler,
     pub player_collider_handle: Option<ColliderHandle>,
     pub player_intersected: bool,
     pub last_intersected: Option<ColliderHandle>,
@@ -84,6 +84,7 @@ pub struct MyEventHandler {
     pub player_intersected: AtomicBool,
     pub collider1: Mutex<Option<ColliderHandle>>,
     pub collider2: Mutex<Option<ColliderHandle>>,
+    pub contact_events: Mutex<Vec<ContactEvent>>,
 }
 
 impl MyEventHandler {
@@ -92,6 +93,7 @@ impl MyEventHandler {
             player_intersected: AtomicBool::new(false),
             collider1: Mutex::new(None),
             collider2: Mutex::new(None),
+            contact_events: Mutex::new(Vec::new()),
         }
     }
 }
@@ -115,5 +117,8 @@ impl EventHandler for MyEventHandler {
     }
 
     #[allow(unused_variables)]
-    fn handle_contact_event(&self, event: ContactEvent, contact_pair: &ContactPair) {}
+    fn handle_contact_event(&self, event: ContactEvent, contact_pair: &ContactPair) {
+        let mut guard = self.contact_events.lock().unwrap();
+        (*guard).push(event);
+    }
 }
