@@ -343,14 +343,14 @@ impl<'a> Game<'a> {
             );
         }
 
+        // Draw player score
         if let Some(player) = &self.player_rc {
             let player = player.borrow();
             let mut score_text = player.score.to_string();
-            //if self.next_gate >= self.gate_count {
-            //    score_text = "Complete!".to_string();
-            //}
+            if self.next_gate >= self.gate_count {
+                score_text = "Completed with score: ".to_owned() + &score_text;
+            }
 
-            // Draw player score
             d.draw_text_ex(
                 &self.font,
                 &score_text,
