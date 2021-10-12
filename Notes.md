@@ -1,8 +1,15 @@
 # TODO
 
-- Menu??
+- Different modes, selection
+    - Different lengths
+    - Fuel mode
+    - Timed mode
 - Lava planets? (touch = die)
 - Asteroids?
-- Fuel Mode?
+- Pausing?
 - Some graphics
+    - Rocket effect
+    - Updated spaceship
+    - Planet graphics?
+    - Title screen
 - Readme
