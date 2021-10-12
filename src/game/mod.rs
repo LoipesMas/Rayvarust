@@ -519,7 +519,7 @@ impl<'a> Game<'a> {
     }
 
     /// Spawns a planet with gates around it
-    pub fn spawn_planet_with_gates(&mut self, position: NVector2, radius: f32, gate_count: u8) {
+    pub fn spawn_planet_with_gates(&mut self, position: NVector2, radius: f32, gate_count: u16) {
         use std::f32::consts::PI;
 
         assert!(gate_count < 6, "Gate count must be less than 6");
@@ -547,17 +547,19 @@ impl<'a> Game<'a> {
     }
 
     /// Spawns many planets at random positions with gates around them
-    pub fn spawn_many_planets_with_gates(&mut self, num_planets: u16) {
+    pub fn spawn_many_planets_with_gates(&mut self, num_gates: u16) {
         use std::f32::consts::PI;
         let mut planets: Vec<(NVector2, f32)> = Vec::new();
 
         let radius_range = 300.0..700.0;
 
+        let mut gates_left = num_gates;
+
         let mut rng = thread_rng();
 
         let mut last_position: NVector2 = vector![0., 0.];
         let mut last_radius = 0.;
-        for _i in 0..num_planets {
+        while gates_left > 0 {
             let mut position_valid = false;
             let radius = rng.gen_range(radius_range.clone());
             let distance = (last_radius + radius) * (3.0 + rng.gen::<f32>());
@@ -580,8 +582,10 @@ impl<'a> Game<'a> {
                 }
             }
 
-            let gate_count =
-                ((rng.gen_range(1..6) + rng.gen_range(1..6)) as f32 * 0.5).ceil() as u8;
+            let mut gate_count =
+                ((rng.gen_range(1..6) + rng.gen_range(1..6)) as f32 * 0.5).ceil() as u16;
+            gate_count = gate_count.min(gates_left);
+            gates_left -= gate_count;
             self.spawn_planet_with_gates(pos, radius, gate_count);
             planets.push((pos, radius));
 

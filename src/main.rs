@@ -20,7 +20,7 @@ fn main() {
 
     let mut the_game = Game::new(&mut rl, &thread, window_width, window_height);
 
-    the_game.spawn_many_planets_with_gates(6);
+    the_game.spawn_many_planets_with_gates(24);
 
     the_game.spawn_player(vector![0., 0.]);
 
