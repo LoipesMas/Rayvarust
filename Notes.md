@@ -1,6 +1,6 @@
 # TODO
 
-- Score (not hitting things = good)
+- Menu??
 - Lava planets? (touch = die)
 - Asteroids?
 - Fuel Mode?
