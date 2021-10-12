@@ -1,8 +1,8 @@
 # TODO
 
-- Arrow guiding to next gate
 - Score (not hitting things = good)
 - Lava planets? (touch = die)
+- Asteroids?
 - Fuel Mode?
 - Some graphics
 - Readme

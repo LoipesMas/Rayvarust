@@ -109,7 +109,7 @@ impl<'a> Game<'a> {
         rl.hide_cursor();
 
         let mut arrow = GameObject::new();
-        arrow.sprite = Some(Sprite::new(arrow_tex.clone(), true, 1.));
+        arrow.sprite = Some(Sprite::new(arrow_tex.clone(), true, 0.5));
 
         Game {
             rl,
@@ -282,9 +282,10 @@ impl<'a> Game<'a> {
                         .borrow()
                         .get_position();
                     let dir = pl_pos - next_pos;
-                    if dir.length() > 512.0 {
+                    if dir.length() > 256.0 {
                         let angle = dir.angle_to(Vector2::new(-1., 0.));
-                        self.arrow.set_position(pl_pos);
+                        let pos = pl_pos - dir.normalized() * 64.0;
+                        self.arrow.set_position(pos);
                         self.arrow.set_rotation(angle);
                         self.arrow.draw(&mut mode);
                     }
