@@ -148,7 +148,7 @@ impl<'a> Game<'a> {
         }
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> Option<GameAction> {
         let delta = self.rl.get_frame_time();
 
         // Update camera center
@@ -157,6 +157,17 @@ impl<'a> Game<'a> {
             let window_height = self.rl.get_screen_height();
             self.camera.offset =
                 Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0);
+        }
+        // Always center mouse
+        self.rl.set_mouse_position(self.camera.offset);
+
+        // Go back to menu
+        if self.rl.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
+            return Some(GameAction::Menu);
+        }
+        // Restart game
+        if self.rl.is_key_pressed(KeyboardKey::KEY_R) {
+            return Some(GameAction::Restart);
         }
 
         // For debug
@@ -204,7 +215,12 @@ impl<'a> Game<'a> {
         self.physics_server
             .step(&mut self.rigid_body_set, &mut self.collider_set);
 
-        let mut contact_events = self.physics_server.event_handler.contact_events.lock().unwrap();
+        let mut contact_events = self
+            .physics_server
+            .event_handler
+            .contact_events
+            .lock()
+            .unwrap();
         for event in contact_events.drain(..) {
             if let ContactEvent::Started(col1, col2) = event {
                 if let Some(player) = &self.player_rc {
@@ -360,13 +376,18 @@ impl<'a> Game<'a> {
                 Color::GREEN,
             );
         }
+        None
     }
 
     /// Runs the game
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> GameAction {
         while !self.rl.window_should_close() {
-            self.step()
+            let action = self.step();
+            if let Some(action) = action {
+                return action;
+            }
         }
+        GameAction::Quit
     }
 
     /// Spawns player
@@ -593,4 +614,11 @@ impl<'a> Game<'a> {
             last_position = pos;
         }
     }
+}
+
+#[derive(PartialEq, Eq)]
+pub enum GameAction {
+    Menu,
+    Restart,
+    Quit,
 }

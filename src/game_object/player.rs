@@ -30,7 +30,7 @@ impl Player {
             ang_speed: 1.0,
             move_vec: NVector2::zeros(),
             rot: 0.0,
-            zoom: 1.0,
+            zoom: 0.3,
             score: 0,
         }
     }
