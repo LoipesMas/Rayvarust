@@ -600,7 +600,7 @@ impl<'a> Game<'a> {
             let distance = (last_radius + radius) * (3.0 + rng.gen::<f32>());
             let mut pos: NVector2 = vector![0., 0.];
             while !position_valid {
-                let angle = rng.gen::<f32>() * PI;
+                let angle = rng.gen::<f32>() * PI * 2.0;
                 let rot = Rotation::new(angle);
                 let offset = rot.into_inner() * distance;
                 pos = vector![offset.re, offset.im] + last_position;
