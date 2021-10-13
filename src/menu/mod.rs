@@ -10,6 +10,7 @@ pub struct Menu<'a> {
     center: Vector2,
     start_button: Button,
     quit_button: Button,
+    font: Font,
 }
 
 impl<'a> Menu<'a> {
@@ -22,12 +23,21 @@ impl<'a> Menu<'a> {
         rl.show_cursor();
         let center = Vector2::new((window_width / 2).into(), (window_height / 2).into());
 
-        let start_button = Button::new("Start Game".to_string(), Vector2::new(100., 50.), center);
+        let start_button = Button::new("Start Game".to_string(), Vector2::new(120., 40.), center);
         let quit_button = Button::new(
             "Quit".to_string(),
-            Vector2::new(100., 50.),
-            center + Vector2::new(0., 75.),
+            Vector2::new(120., 40.),
+            center + Vector2::new(0., 50.),
         );
+
+        let font = rl
+            .load_font_ex(
+                thread,
+                "resources/fonts/Roboto-Regular.ttf",
+                100,
+                FontLoadEx::Default(0),
+            )
+            .expect("Couldn't load font");
 
         Menu {
             rl,
@@ -36,6 +46,7 @@ impl<'a> Menu<'a> {
             center,
             start_button,
             quit_button,
+            font,
         }
     }
 
@@ -52,11 +63,28 @@ impl<'a> Menu<'a> {
         }
 
         let esc_pressed = self.rl.is_key_pressed(KeyboardKey::KEY_ESCAPE);
+        let start_pressed = self.rl.is_key_pressed(KeyboardKey::KEY_SPACE)
+            || self.rl.is_key_pressed(KeyboardKey::KEY_ENTER);
 
         let mut d = self.rl.begin_drawing(self.thread);
         d.clear_background(Color::GOLD);
+        d.gui_set_font(&self.font);
+        d.gui_set_style(
+            GuiControl::DEFAULT,
+            GuiDefaultProperty::TEXT_SIZE as i32,
+            100,
+        );
+        d.gui_label(
+            Rectangle::new(self.center.x - 250., 10., 200., 200.),
+            Some(rstr!("RAYVARUST")),
+        );
+        d.gui_set_style(
+            GuiControl::DEFAULT,
+            GuiDefaultProperty::TEXT_SIZE as i32,
+            22,
+        );
         let start = self.start_button.draw(&mut d);
-        if start {
+        if start || start_pressed {
             return Some(MenuAction::Start);
         }
         let quit_b_pressed = self.quit_button.draw(&mut d);

@@ -61,7 +61,12 @@ impl<'a> Game<'a> {
         let draw_collisions = false;
 
         let font = rl
-            .load_font(thread, "resources/fonts/RobotoMono-Regular.ttf")
+            .load_font_ex(
+                thread,
+                "resources/fonts/Roboto-Regular.ttf",
+                100,
+                FontLoadEx::Default(0),
+            )
             .expect("Couldn't load font");
 
         let player_tex = unsafe {
