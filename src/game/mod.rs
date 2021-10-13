@@ -37,6 +37,8 @@ pub struct Game<'a> {
     gate_objects: Vec<Rc<RefCell<Gate>>>,
     player_rc: Option<Rc<RefCell<Player>>>,
     player_tex: WeakTexture2D,
+    player_score: i32,
+    completed: bool,
     camera: Camera2D,
     font: Font,
     asteroid_tex: WeakTexture2D,
@@ -127,6 +129,8 @@ impl<'a> Game<'a> {
             gate_objects,
             player_rc: None,
             player_tex,
+            player_score: 30,
+            completed: false,
             camera,
             font,
             asteroid_tex,
@@ -222,9 +226,10 @@ impl<'a> Game<'a> {
             .lock()
             .unwrap();
         for event in contact_events.drain(..) {
+            #[allow(unused_variables)]
             if let ContactEvent::Started(col1, col2) = event {
-                if let Some(player) = &self.player_rc {
-                    player.borrow_mut().score -= 10;
+                if !self.completed {
+                    self.player_score -= 10;
                 }
             }
         }
@@ -241,13 +246,13 @@ impl<'a> Game<'a> {
                     if body.user_data == self.next_gate.into() {
                         // "Select" next gate
                         self.next_gate += 1;
-                        if let Some(player_rc) = &self.player_rc {
-                            player_rc.borrow_mut().score += 30;
-                        }
+                        self.player_score += 30;
                     }
                 }
             }
         }
+
+        self.completed = self.next_gate >= self.gate_count;
 
         // Update state of all physics objects
         // (This makes their position and rotation the same as their rigidbodies')
@@ -299,7 +304,7 @@ impl<'a> Game<'a> {
             }
 
             // Draw arrow to next gate
-            if self.next_gate < self.gate_count {
+            if !self.completed {
                 if let Some(player) = &self.player_rc {
                     let player = player.borrow();
                     let pl_pos = player.get_position();
@@ -360,22 +365,31 @@ impl<'a> Game<'a> {
         }
 
         // Draw player score
-        if let Some(player) = &self.player_rc {
-            let player = player.borrow();
-            let mut score_text = player.score.to_string();
-            if self.next_gate >= self.gate_count {
-                score_text = "Completed with score: ".to_owned() + &score_text;
-            }
-
-            d.draw_text_ex(
-                &self.font,
-                &score_text,
-                Vector2 { x: 0.0, y: 50.0 },
-                50.0,
-                1.0,
-                Color::GREEN,
-            );
+        let mut score_text = self.player_score.to_string();
+        if self.completed {
+            score_text = "Completed with score: ".to_owned() + &score_text;
         }
+
+        d.draw_text_ex(
+            &self.font,
+            &score_text,
+            Vector2 { x: 0.0, y: 50.0 },
+            50.0,
+            0.0,
+            Color::GREEN,
+        );
+
+        let gates_text = format!("Gates: {}/{}", self.next_gate, self.gate_count);
+
+        d.draw_text_ex(
+            &self.font,
+            &gates_text,
+            Vector2 { x: 0.0, y: 100.0 },
+            50.0,
+            0.0,
+            Color::GREEN,
+        );
+
         None
     }
 
