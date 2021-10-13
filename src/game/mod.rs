@@ -38,6 +38,7 @@ pub struct Game<'a> {
     player_rc: Option<Rc<RefCell<Player>>>,
     player_tex: WeakTexture2D,
     player_score: i32,
+    time_since_start: f32,
     completed: bool,
     camera: Camera2D,
     font: Font,
@@ -130,6 +131,7 @@ impl<'a> Game<'a> {
             player_rc: None,
             player_tex,
             player_score: 30,
+            time_since_start: 0.,
             completed: false,
             camera,
             font,
@@ -154,6 +156,9 @@ impl<'a> Game<'a> {
 
     pub fn step(&mut self) -> Option<GameAction> {
         let delta = self.rl.get_frame_time();
+        if !self.completed {
+            self.time_since_start += delta;
+        }
 
         // Update camera center
         if self.rl.is_window_resized() {
@@ -352,43 +357,84 @@ impl<'a> Game<'a> {
             }
         }
 
-        // Draw fps
-        if self.draw_fps {
+        // Draw UI
+        {
+            // Draw fps in top-left corner
+            if self.draw_fps {
+                d.draw_text_ex(
+                    &self.font,
+                    &format!("{:.1}", 1.0 / delta),
+                    Vector2::new(1825., 0.),
+                    50.0,
+                    1.0,
+                    Color::WHITE,
+                );
+            }
+
+            let mut line = 0.;
+
+            // Player score
+            let score_text = self.player_score.to_string();
             d.draw_text_ex(
                 &self.font,
-                &(1. / delta).to_string(),
-                Vector2::zero(),
+                &score_text,
+                Vector2 {
+                    x: 0.0,
+                    y: 50.0 * line,
+                },
                 50.0,
-                1.0,
-                Color::WHITE,
+                0.0,
+                Color::GREEN,
             );
+            line += 1.0;
+
+            // Gates
+            let gates_text = format!("Gates: {}/{}", self.next_gate, self.gate_count);
+            d.draw_text_ex(
+                &self.font,
+                &gates_text,
+                Vector2 {
+                    x: 0.0,
+                    y: 50.0 * line,
+                },
+                50.0,
+                0.0,
+                Color::GREEN,
+            );
+            line += 1.0;
+
+            // Time
+            let time_text = format!("Time: {:.2}", self.time_since_start);
+            d.draw_text_ex(
+                &self.font,
+                &time_text,
+                Vector2 {
+                    x: 0.0,
+                    y: 50.0 * line,
+                },
+                50.0,
+                0.0,
+                Color::GREEN,
+            );
+            line += 1.0;
+
+            // Restart prompt
+            if self.completed {
+                let restart_text = "Press R to restart";
+                d.draw_text_ex(
+                    &self.font,
+                    restart_text,
+                    Vector2 {
+                        x: 0.0,
+                        y: 50.0 * line,
+                    },
+                    50.0,
+                    0.0,
+                    Color::GREEN,
+                );
+                line += 1.0;
+            }
         }
-
-        // Draw player score
-        let mut score_text = self.player_score.to_string();
-        if self.completed {
-            score_text = "Completed with score: ".to_owned() + &score_text;
-        }
-
-        d.draw_text_ex(
-            &self.font,
-            &score_text,
-            Vector2 { x: 0.0, y: 50.0 },
-            50.0,
-            0.0,
-            Color::GREEN,
-        );
-
-        let gates_text = format!("Gates: {}/{}", self.next_gate, self.gate_count);
-
-        d.draw_text_ex(
-            &self.font,
-            &gates_text,
-            Vector2 { x: 0.0, y: 100.0 },
-            50.0,
-            0.0,
-            Color::GREEN,
-        );
 
         None
     }
