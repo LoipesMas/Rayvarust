@@ -275,8 +275,9 @@ impl<'a> Game<'a> {
             object.borrow_mut().update_state(body);
         }
 
-        // Camera follows player
+        // Camera
         if let Some(player_rc) = &self.player_rc {
+        // Camera follows player
             self.camera.target = to_rv2(lerp(
                 to_nv2(self.camera.target),
                 to_nv2(player_rc.borrow().get_position()),
@@ -428,19 +429,23 @@ impl<'a> Game<'a> {
             );
 
             // Fuel
-            let fuel_text = format!("Fuel: {}", 100.);
-            line += 1.0;
-            d.draw_text_ex(
-                &self.font,
-                &fuel_text,
-                Vector2 {
-                    x: 0.0,
-                    y: 50.0 * line,
-                },
-                50.0,
-                0.0,
-                Color::GREEN,
-            );
+            if let Some(player) = &self.player_rc {
+                let mut player = player.borrow_mut();
+                player.level_completed = self.completed;
+                let fuel_text = format!("Fuel: {:.0}", player.fuel);
+                line += 1.0;
+                d.draw_text_ex(
+                    &self.font,
+                    &fuel_text,
+                    Vector2 {
+                        x: 0.0,
+                        y: 50.0 * line,
+                    },
+                    50.0,
+                    0.0,
+                    Color::GREEN,
+                );
+            }
 
             // Restart prompt
             if self.completed {
