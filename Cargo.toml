@@ -8,6 +8,7 @@ authors = ["LoipesMas"]
 
 [dependencies]
 rand = "0.8.4"
+rand_pcg = "0.3.1"
 raylib = "3.5"
 rapier2d = { version = "0.11.1", features = [ "simd-stable" ] }
 

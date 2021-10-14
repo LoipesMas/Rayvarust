@@ -8,9 +8,12 @@ pub struct Menu<'a> {
     thread: &'a RaylibThread,
     window_size: (i16, i16),
     center: Vector2,
-    start_button: Button,
+    short_button: Button,
+    medium_button: Button,
+    long_button: Button,
     quit_button: Button,
     font: Font,
+    random_levels: bool,
 }
 
 impl<'a> Menu<'a> {
@@ -19,15 +22,34 @@ impl<'a> Menu<'a> {
         thread: &'a RaylibThread,
         window_width: i16,
         window_height: i16,
+        random_levels: bool,
     ) -> Self {
         rl.show_cursor();
         let center = Vector2::new((window_width / 2).into(), (window_height / 2).into());
 
-        let start_button = Button::new("Start Game".to_string(), Vector2::new(120., 40.), center);
+        let mut line = 0.;
+        let short_button = Button::new(
+            "Short".to_string(),
+            Vector2::new(120., 40.),
+            center + Vector2::new(0., 50. * line),
+        );
+        line += 1.;
+        let medium_button = Button::new(
+            "Medium".to_string(),
+            Vector2::new(120., 40.),
+            center + Vector2::new(0., 50. * line),
+        );
+        line += 1.;
+        let long_button = Button::new(
+            "Long".to_string(),
+            Vector2::new(120., 40.),
+            center + Vector2::new(0., 50. * line),
+        );
+        line += 1.;
         let quit_button = Button::new(
             "Quit".to_string(),
             Vector2::new(120., 40.),
-            center + Vector2::new(0., 50.),
+            center + Vector2::new(0., 50. * line),
         );
 
         let font = rl
@@ -44,9 +66,12 @@ impl<'a> Menu<'a> {
             thread,
             window_size: (window_width, window_height),
             center,
-            start_button,
+            short_button,
+            medium_button,
+            long_button,
             quit_button,
             font,
+            random_levels,
         }
     }
 
@@ -59,12 +84,10 @@ impl<'a> Menu<'a> {
                 (self.window_size.0 / 2).into(),
                 (self.window_size.1 / 2).into(),
             );
-            self.start_button.position = self.center;
+            self.short_button.position = self.center;
         }
 
         let esc_pressed = self.rl.is_key_pressed(KeyboardKey::KEY_ESCAPE);
-        let start_pressed = self.rl.is_key_pressed(KeyboardKey::KEY_SPACE)
-            || self.rl.is_key_pressed(KeyboardKey::KEY_ENTER);
 
         let mut d = self.rl.begin_drawing(self.thread);
         d.clear_background(Color::GOLD);
@@ -83,12 +106,30 @@ impl<'a> Menu<'a> {
             GuiDefaultProperty::TEXT_SIZE as i32,
             22,
         );
-        let start = self.start_button.draw(&mut d);
-        if start || start_pressed {
-            return Some(MenuAction::Start);
-        }
-        let quit_b_pressed = self.quit_button.draw(&mut d);
 
+        let mut toggle_text = rstr!("Random levels: ON");
+        if !self.random_levels {
+            toggle_text = rstr!("Random levels: OFF");
+        }
+        self.random_levels = d.gui_toggle(Rectangle::new(300.,300., 200., 50.), Some(toggle_text), self.random_levels);
+
+        // Select short level
+        let short = self.short_button.draw(&mut d);
+        if short {
+            return Some(MenuAction::Start(0, self.random_levels));
+        }
+        // Select medium level
+        let medium = self.medium_button.draw(&mut d);
+        if medium {
+            return Some(MenuAction::Start(1, self.random_levels));
+        }
+        // Select long level
+        let long = self.long_button.draw(&mut d);
+        if long {
+            return Some(MenuAction::Start(2, self.random_levels));
+        }
+
+        let quit_b_pressed = self.quit_button.draw(&mut d);
         if quit_b_pressed || esc_pressed {
             return Some(MenuAction::Quit);
         }
@@ -108,6 +149,6 @@ impl<'a> Menu<'a> {
 
 #[derive(PartialEq, Eq)]
 pub enum MenuAction {
-    Start,
+    Start(usize, bool),
     Quit,
 }

@@ -10,6 +10,7 @@ mod physics_server;
 use physics_server::*;
 
 use rand::prelude::*;
+use rand_pcg::Pcg64;
 
 /// Color of debug collider
 const COLL_COLOR: Color = Color {
@@ -24,6 +25,7 @@ const G: f32 = 10.0;
 pub struct Game<'a> {
     rl: &'a mut RaylibHandle,
     thread: &'a RaylibThread,
+    rng: Pcg64,
     draw_fps: bool,
     draw_collisions: bool,
     bg_color: Color,
@@ -56,6 +58,7 @@ impl<'a> Game<'a> {
         thread: &'a RaylibThread,
         window_width: i16,
         window_height: i16,
+        seed: u64,
     ) -> Self {
         let draw_fps = true;
         let draw_collisions = false;
@@ -122,6 +125,7 @@ impl<'a> Game<'a> {
         Game {
             rl,
             thread,
+            rng: Pcg64::seed_from_u64(seed),
             draw_fps,
             draw_collisions,
             bg_color,
@@ -376,10 +380,11 @@ impl<'a> Game<'a> {
                 );
             }
 
-            let mut line = 0.;
+            let mut line = -1.;
 
             // Player score
-            let score_text = self.player_score.to_string();
+            let score_text = format!("Score: {:}", self.player_score);
+            line += 1.0;
             d.draw_text_ex(
                 &self.font,
                 &score_text,
@@ -391,10 +396,10 @@ impl<'a> Game<'a> {
                 0.0,
                 Color::GREEN,
             );
-            line += 1.0;
 
             // Gates
             let gates_text = format!("Gates: {}/{}", self.next_gate, self.gate_count);
+            line += 1.0;
             d.draw_text_ex(
                 &self.font,
                 &gates_text,
@@ -406,10 +411,10 @@ impl<'a> Game<'a> {
                 0.0,
                 Color::GREEN,
             );
-            line += 1.0;
 
             // Time
             let time_text = format!("Time: {:.2}", self.time_since_start);
+            line += 1.0;
             d.draw_text_ex(
                 &self.font,
                 &time_text,
@@ -421,11 +426,26 @@ impl<'a> Game<'a> {
                 0.0,
                 Color::GREEN,
             );
+
+            // Fuel
+            let fuel_text = format!("Fuel: {}", 100.);
             line += 1.0;
+            d.draw_text_ex(
+                &self.font,
+                &fuel_text,
+                Vector2 {
+                    x: 0.0,
+                    y: 50.0 * line,
+                },
+                50.0,
+                0.0,
+                Color::GREEN,
+            );
 
             // Restart prompt
             if self.completed {
                 let restart_text = "Press R to restart";
+                line += 1.0;
                 d.draw_text_ex(
                     &self.font,
                     restart_text,
@@ -437,7 +457,6 @@ impl<'a> Game<'a> {
                     0.0,
                     Color::GREEN,
                 );
-                line += 1.0;
             }
         }
 
@@ -610,21 +629,19 @@ impl<'a> Game<'a> {
 
         assert!(gate_count < 6, "Gate count must be less than 6");
 
-        let mut rng = thread_rng();
-
-        let hue = rng.gen::<f32>() * 250.;
-        let sat = rng.gen::<f32>() * 0.5 + 0.5;
+        let hue = self.rng.gen::<f32>() * 250.;
+        let sat = self.rng.gen::<f32>() * 0.5 + 0.5;
         let color = Color::color_from_hsv(hue, sat, 0.7);
 
         self.spawn_planet(position, radius, color);
 
-        let direction = (rng.gen::<f32>() - 0.5).signum();
+        let direction = (self.rng.gen::<f32>() - 0.5).signum();
 
-        let start_angle = rng.gen::<f32>() * PI;
+        let start_angle = self.rng.gen::<f32>() * PI;
 
-        let angle_step = 2.0 * PI / (5.0 + rng.gen::<f32>() * 2.0);
+        let angle_step = 2.0 * PI / (5.0 + self.rng.gen::<f32>() * 2.0);
         for i in 0..gate_count {
-            let gate_offset: f32 = radius * (rng.gen::<f32>() + 1.2) + 100.;
+            let gate_offset: f32 = radius * (self.rng.gen::<f32>() + 1.2) + 100.;
             let rot = Rotation::new(start_angle + angle_step * direction * i as f32);
             let offset = rot.into_inner() * gate_offset;
             let pos = vector![offset.re, offset.im] + position;
@@ -641,17 +658,15 @@ impl<'a> Game<'a> {
 
         let mut gates_left = num_gates;
 
-        let mut rng = thread_rng();
-
         let mut last_position: NVector2 = vector![0., 0.];
         let mut last_radius = 0.;
         while gates_left > 0 {
             let mut position_valid = false;
-            let radius = rng.gen_range(radius_range.clone());
-            let distance = (last_radius + radius) * (3.0 + rng.gen::<f32>());
+            let radius = self.rng.gen_range(radius_range.clone());
+            let distance = (last_radius + radius) * (3.0 + self.rng.gen::<f32>());
             let mut pos: NVector2 = vector![0., 0.];
             while !position_valid {
-                let angle = rng.gen::<f32>() * PI * 2.0;
+                let angle = self.rng.gen::<f32>() * PI * 2.0;
                 let rot = Rotation::new(angle);
                 let offset = rot.into_inner() * distance;
                 pos = vector![offset.re, offset.im] + last_position;
@@ -669,7 +684,7 @@ impl<'a> Game<'a> {
             }
 
             let mut gate_count =
-                ((rng.gen_range(1..6) + rng.gen_range(1..6)) as f32 * 0.5).ceil() as u16;
+                ((self.rng.gen_range(1..6) + self.rng.gen_range(1..6)) as f32 * 0.5).ceil() as u16;
             gate_count = gate_count.min(gates_left);
             gates_left -= gate_count;
             self.spawn_planet_with_gates(pos, radius, gate_count);
