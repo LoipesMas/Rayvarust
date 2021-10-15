@@ -40,6 +40,7 @@ pub struct Game<'a> {
     gate_objects: Vec<Rc<RefCell<Gate>>>,
     player_rc: Option<Rc<RefCell<Player>>>,
     player_tex: WeakTexture2D,
+    exhaust_tex: WeakTexture2D,
     player_score: i32,
     time_since_start: f32,
     completed: bool,
@@ -77,6 +78,12 @@ impl<'a> Game<'a> {
         let player_tex = unsafe {
             rl.load_texture(thread, "resources/textures/spaceship.png")
                 .expect("Couldn't load spaceship.png")
+                .make_weak()
+        };
+
+        let exhaust_tex = unsafe {
+            rl.load_texture(thread, "resources/textures/exhaust.png")
+                .expect("Couldn't load exhaust.png")
                 .make_weak()
         };
 
@@ -142,6 +149,7 @@ impl<'a> Game<'a> {
             gate_objects,
             player_rc: None,
             player_tex,
+            exhaust_tex,
             player_score: 30,
             time_since_start: 0.,
             completed: false,
@@ -487,7 +495,7 @@ impl<'a> Game<'a> {
     /// Spawns player
     pub fn spawn_player(&mut self, position: NVector2, fuel: f32) {
         assert!(self.player_rc.is_none(), "Can't spawn a second player");
-        let mut player = Player::new(self.player_tex.clone());
+        let mut player = Player::new(self.player_tex.clone(), self.exhaust_tex.clone());
         player.fuel = fuel;
         player.fuel_mode = self.fuel_mode;
 

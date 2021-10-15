@@ -8,6 +8,7 @@ pub type NVector2 = rapier2d::prelude::nalgebra::base::Vector2<Real>;
 
 use std::ops::{Add, Mul, Sub};
 
+#[derive(Clone, Copy)]
 pub struct Transform2D {
     pub position: Vector2,
     pub rotation: f32,

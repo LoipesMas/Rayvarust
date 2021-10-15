@@ -1,15 +1,17 @@
 use super::{Drawable, GameObject, PhysicsObject, Processing, Spatial, Sprite};
 
-use crate::{impl_drawable, impl_spatial};
+use crate::impl_spatial;
 
 use raylib::prelude::*;
 
-use crate::math::NVector2;
+use crate::math::*;
 
 use rapier2d::prelude::*;
 
 pub struct Player {
     game_object: GameObject,
+    exhaust_sprite: Sprite,
+    exhaust_offset: NVector2,
     pub lin_speed: f32,
     pub ang_speed: f32,
     move_vec: NVector2, // add this to lin vel on next phys process
@@ -22,14 +24,17 @@ pub struct Player {
 
 #[allow(dead_code)]
 impl Player {
-    pub fn new(texture: WeakTexture2D) -> Self {
+    pub fn new(main_texture: WeakTexture2D, exhaust_texture: WeakTexture2D) -> Self {
         let mut game_object = GameObject::new();
-        game_object.sprite = Some(Sprite::new(texture, true, 0.7));
+        game_object.sprite = Some(Sprite::new(main_texture, true, 0.7));
+        let exhaust_sprite = Sprite::new(exhaust_texture, true, 0.475);
 
         Player {
             game_object,
+            exhaust_sprite,
+            exhaust_offset: vector![0., 50.],
             lin_speed: 70.0,
-            ang_speed: 1.0,
+            ang_speed: 1.45,
             move_vec: NVector2::zeros(),
             rot: 0.0,
             zoom: 0.3,
@@ -44,7 +49,31 @@ impl Player {
 }
 
 impl_spatial!(Player);
-impl_drawable!(Player);
+
+impl Drawable for Player {
+    fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>) {
+        if self.move_vec.y < 0. {
+            let mut exhaust_transform = self.game_object.transform;
+            let rot = Rotation::new(exhaust_transform.rotation);
+            let offset = to_rv2(rot * self.exhaust_offset);
+            exhaust_transform.position += offset;
+            self.exhaust_sprite.draw(rl, &exhaust_transform);
+        }
+        self.game_object.draw(rl);
+    }
+
+    fn get_scale(&self) -> f32 {
+        self.game_object.get_scale()
+    }
+
+    fn set_scale(&mut self, scale: f32) {
+        self.game_object.set_scale(scale);
+    }
+
+    fn set_tint(&mut self, tint: Color) {
+        self.game_object.set_tint(tint);
+    }
+}
 
 impl Processing for Player {
     fn process(&mut self, rl: &mut RaylibHandle, delta: f32) {
@@ -79,9 +108,6 @@ impl Processing for Player {
             }
         }
         self.fuel = self.fuel.max(0.);
-
-        let rot = Rotation::new(self.get_rotation());
-        self.move_vec = rot * self.move_vec;
 
         // Rotating
         let rot_l = rl.is_key_down(KeyboardKey::KEY_I);
@@ -121,7 +147,9 @@ impl PhysicsObject for Player {
     }
 
     fn physics_process(&mut self, delta: f32, body: &mut RigidBody) {
-        body.set_linvel(body.linvel() + self.move_vec * delta, true);
+        let rot = Rotation::new(self.get_rotation());
+        let move_vec = rot * self.move_vec;
+        body.set_linvel(body.linvel() + move_vec * delta, true);
         body.set_angvel(body.angvel() + self.rot * delta, true);
         self.game_object.physics_process(delta, body);
     }
