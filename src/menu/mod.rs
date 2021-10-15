@@ -14,6 +14,7 @@ pub struct Menu<'a> {
     quit_button: Button,
     font: Font,
     random_levels: bool,
+    fuel_mode: bool,
 }
 
 impl<'a> Menu<'a> {
@@ -23,6 +24,7 @@ impl<'a> Menu<'a> {
         window_width: i16,
         window_height: i16,
         random_levels: bool,
+        fuel_mode: bool,
     ) -> Self {
         rl.show_cursor();
         let center = Vector2::new((window_width / 2).into(), (window_height / 2).into());
@@ -72,6 +74,7 @@ impl<'a> Menu<'a> {
             quit_button,
             font,
             random_levels,
+            fuel_mode,
         }
     }
 
@@ -111,22 +114,35 @@ impl<'a> Menu<'a> {
         if !self.random_levels {
             toggle_text = rstr!("Random levels: OFF");
         }
-        self.random_levels = d.gui_toggle(Rectangle::new(300.,300., 200., 50.), Some(toggle_text), self.random_levels);
+        self.random_levels = d.gui_toggle(
+            Rectangle::new(300., 300., 200., 50.),
+            Some(toggle_text),
+            self.random_levels,
+        );
+        let mut toggle_text = rstr!("Fuel mode: ON");
+        if !self.fuel_mode {
+            toggle_text = rstr!("Fuel mode: OFF");
+        }
+        self.fuel_mode = d.gui_toggle(
+            Rectangle::new(300., 360., 200., 50.),
+            Some(toggle_text),
+            self.fuel_mode,
+        );
 
         // Select short level
         let short = self.short_button.draw(&mut d);
         if short {
-            return Some(MenuAction::Start(0, self.random_levels));
+            return Some(MenuAction::Start(0, self.random_levels, self.fuel_mode));
         }
         // Select medium level
         let medium = self.medium_button.draw(&mut d);
         if medium {
-            return Some(MenuAction::Start(1, self.random_levels));
+            return Some(MenuAction::Start(1, self.random_levels, self.fuel_mode));
         }
         // Select long level
         let long = self.long_button.draw(&mut d);
         if long {
-            return Some(MenuAction::Start(2, self.random_levels));
+            return Some(MenuAction::Start(2, self.random_levels, self.fuel_mode));
         }
 
         let quit_b_pressed = self.quit_button.draw(&mut d);
@@ -149,6 +165,6 @@ impl<'a> Menu<'a> {
 
 #[derive(PartialEq, Eq)]
 pub enum MenuAction {
-    Start(usize, bool),
+    Start(usize, bool, bool),
     Quit,
 }

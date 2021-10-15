@@ -26,6 +26,7 @@ pub struct Game<'a> {
     rl: &'a mut RaylibHandle,
     thread: &'a RaylibThread,
     rng: Pcg64,
+    fuel_mode: bool,
     draw_fps: bool,
     draw_collisions: bool,
     bg_color: Color,
@@ -59,6 +60,7 @@ impl<'a> Game<'a> {
         window_width: i16,
         window_height: i16,
         seed: u64,
+        fuel_mode: bool,
     ) -> Self {
         let draw_fps = true;
         let draw_collisions = false;
@@ -126,6 +128,7 @@ impl<'a> Game<'a> {
             rl,
             thread,
             rng: Pcg64::seed_from_u64(seed),
+            fuel_mode,
             draw_fps,
             draw_collisions,
             bg_color,
@@ -277,7 +280,7 @@ impl<'a> Game<'a> {
 
         // Camera
         if let Some(player_rc) = &self.player_rc {
-        // Camera follows player
+            // Camera follows player
             self.camera.target = to_rv2(lerp(
                 to_nv2(self.camera.target),
                 to_nv2(player_rc.borrow().get_position()),
@@ -429,22 +432,24 @@ impl<'a> Game<'a> {
             );
 
             // Fuel
-            if let Some(player) = &self.player_rc {
-                let mut player = player.borrow_mut();
-                player.level_completed = self.completed;
-                let fuel_text = format!("Fuel: {:.0}", player.fuel);
-                line += 1.0;
-                d.draw_text_ex(
-                    &self.font,
-                    &fuel_text,
-                    Vector2 {
-                        x: 0.0,
-                        y: 50.0 * line,
-                    },
-                    50.0,
-                    0.0,
-                    Color::GREEN,
-                );
+            if self.fuel_mode {
+                if let Some(player) = &self.player_rc {
+                    let mut player = player.borrow_mut();
+                    player.level_completed = self.completed;
+                    let fuel_text = format!("Fuel: {:.0}", player.fuel);
+                    line += 1.0;
+                    d.draw_text_ex(
+                        &self.font,
+                        &fuel_text,
+                        Vector2 {
+                            x: 0.0,
+                            y: 50.0 * line,
+                        },
+                        50.0,
+                        0.0,
+                        Color::GREEN,
+                    );
+                }
             }
 
             // Restart prompt
@@ -480,9 +485,11 @@ impl<'a> Game<'a> {
     }
 
     /// Spawns player
-    pub fn spawn_player(&mut self, position: NVector2) {
-        assert!(self.player_rc.is_none(), "Can't spawn second player");
+    pub fn spawn_player(&mut self, position: NVector2, fuel: f32) {
+        assert!(self.player_rc.is_none(), "Can't spawn a second player");
         let mut player = Player::new(self.player_tex.clone());
+        player.fuel = fuel;
+        player.fuel_mode = self.fuel_mode;
 
         let rigid_body = RigidBodyBuilder::new_dynamic()
             .translation(position)

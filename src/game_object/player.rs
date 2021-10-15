@@ -16,6 +16,7 @@ pub struct Player {
     rot: f32,           // add this to ang vel on next phys process
     zoom: f32,
     pub fuel: f32,
+    pub fuel_mode: bool,
     pub level_completed: bool,
 }
 
@@ -32,7 +33,8 @@ impl Player {
             move_vec: NVector2::zeros(),
             rot: 0.0,
             zoom: 0.3,
-            fuel: 0.,
+            fuel: 10.,
+            fuel_mode: false,
             level_completed: false,
         }
     }
@@ -54,26 +56,29 @@ impl Processing for Player {
 
         self.move_vec = vector![0., 0.];
 
-        let mut moves_count = 0;
-        if move_u {
-            self.move_vec.y -= self.lin_speed * 3.0;
-            moves_count += 1;
+        if self.fuel > 0. {
+            let mut moves_count = 0;
+            if move_u {
+                self.move_vec.y -= self.lin_speed * 3.0;
+                moves_count += 1;
+            }
+            if move_d {
+                self.move_vec.y += self.lin_speed;
+                moves_count += 1;
+            }
+            if move_l {
+                self.move_vec.x -= self.lin_speed;
+                moves_count += 1;
+            }
+            if move_r {
+                self.move_vec.x += self.lin_speed;
+                moves_count += 1;
+            }
+            if !self.level_completed && self.fuel_mode {
+                self.fuel -= delta * 10. * moves_count as f32;
+            }
         }
-        if move_d {
-            self.move_vec.y += self.lin_speed;
-            moves_count += 1;
-        }
-        if move_l {
-            self.move_vec.x -= self.lin_speed;
-            moves_count += 1;
-        }
-        if move_r {
-            self.move_vec.x += self.lin_speed;
-            moves_count += 1;
-        }
-        if !self.level_completed {
-            self.fuel -= delta * 10. * moves_count as f32;
-        }
+        self.fuel = self.fuel.max(0.);
 
         let rot = Rotation::new(self.get_rotation());
         self.move_vec = rot * self.move_vec;
@@ -83,11 +88,13 @@ impl Processing for Player {
         let rot_r = rl.is_key_down(KeyboardKey::KEY_O);
 
         self.rot = 0.0;
-        if rot_l {
-            self.rot -= self.ang_speed;
-        }
-        if rot_r {
-            self.rot += self.ang_speed;
+        if self.fuel > 0. {
+            if rot_l {
+                self.rot -= self.ang_speed;
+            }
+            if rot_r {
+                self.rot += self.ang_speed;
+            }
         }
 
         // Zoom
