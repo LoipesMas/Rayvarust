@@ -1,9 +1,5 @@
 # TODO
 
-- Different modes, selection
-    - Different lengths
-    - Fuel mode
-    - Timed mode
 - Lava planets? (touch = die)
 - Asteroids?
 - Pausing?
