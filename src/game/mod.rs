@@ -1,4 +1,4 @@
-use crate::math::*;
+use crate::math::{lerp, to_nv2, to_rv2, NVector2};
 use rapier2d::prelude::*;
 use raylib::prelude::*;
 use std::cell::RefCell;
