@@ -171,6 +171,7 @@ impl<'a> Game<'a> {
     pub fn unload(&mut self) {
         unsafe {
             self.rl.unload_texture(self.thread, self.player_tex.clone());
+            self.rl.unload_texture(self.thread, self.exhaust_tex.clone());
             self.rl
                 .unload_texture(self.thread, self.asteroid_tex.clone());
             self.rl.unload_texture(self.thread, self.gate_tex.clone());
