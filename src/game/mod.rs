@@ -12,6 +12,8 @@ use physics_server::*;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
+use std::f32::consts::PI;
+
 /// Color of debug collider
 const COLL_COLOR: Color = Color {
     r: 70,
@@ -537,46 +539,48 @@ impl<'a> Game<'a> {
         self.player_rc = Some(player_rc);
     }
 
-    /// Spawns 100 asteroids
-    /// (For testing)
-    // TODO: make seperate function for spawning an asteroid
-    pub fn spawn_asteroids(&mut self) {
-        let center = vector![63. * 4.5, 50. * 4.5];
+    /// Spawns an asteroid at given position
+    pub fn spawn_asteroid(&mut self, position: NVector2, velocities: RigidBodyVelocity) {
+        let mut asteroid = GameObject::new();
+        asteroid.sprite = Some(Sprite::new(self.asteroid_tex.clone(), true, 0.3));
 
-        // Spawn 100 asteroids
-        for i in 0..10 {
-            for j in 0..10 {
-                let mut asteroid = GameObject::new();
-                asteroid.sprite = Some(Sprite::new(self.asteroid_tex.clone(), true, 0.3));
-                let pos = vector![60. * i as f32, 50. * j as f32];
+        let rigid_body = RigidBodyBuilder::new_dynamic()
+            .translation(position)
+            .rotation(position.x * position.y)
+            .linvel(velocities.linvel)
+            .angvel(velocities.angvel)
+            .can_sleep(false)
+            .build();
+        let collider = ColliderBuilder::capsule_y(0.0, 13.0)
+            .restitution(0.8)
+            .density(0.5)
+            .build();
 
-                let mut rigid_body = RigidBodyBuilder::new_dynamic()
-                    .translation(pos)
-                    .can_sleep(false)
-                    .build();
-                let collider = ColliderBuilder::capsule_y(0.0, 13.0)
-                    .restitution(0.8)
-                    .density(0.5)
-                    .build();
+        let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
+        self.collider_set
+            .insert_with_parent(collider, rigid_body_handle, &mut self.rigid_body_set);
+        asteroid.set_body(rigid_body_handle);
 
-                let mut vel = center - pos;
-                vel.normalize_mut();
-                vel *= 30.;
-                rigid_body.set_linvel(vel, true);
+        let asteroid_rc = Rc::new(RefCell::new(asteroid));
+        self.process_objects.push(asteroid_rc.clone());
+        self.draw_objects.push(asteroid_rc.clone());
+        self.phys_objects.push(asteroid_rc);
+    }
 
-                let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
-                self.collider_set.insert_with_parent(
-                    collider,
-                    rigid_body_handle,
-                    &mut self.rigid_body_set,
-                );
-                asteroid.set_body(rigid_body_handle);
-
-                let asteroid_rc = Rc::new(RefCell::new(asteroid));
-                self.process_objects.push(asteroid_rc.clone());
-                self.draw_objects.push(asteroid_rc.clone());
-                self.phys_objects.push(asteroid_rc);
-            }
+    /// Spawns asteroids around given planet
+    pub fn spawn_asteroids_around_planet(&mut self, planet_pos: NVector2, planet_radius: f32) {
+        let asteroid_count = self.rng.gen_range(20..40);
+        for _ in 0..asteroid_count {
+            let rot = Rotation::new(self.rng.gen_range(0.0..2.0 * PI));
+            let offset = rot * vector![1., 0.] * self.rng.gen_range(1.5..5.5) * planet_radius;
+            let linvel = self.rng.gen_range(30.0..300.0)
+                * vector![
+                    self.rng.gen_range(-1.0..1.0f32),
+                    self.rng.gen_range(-1.0..1.0f32)
+                ]
+                .normalize();
+            let angvel = self.rng.gen_range(-10.0..10.0);
+            self.spawn_asteroid(planet_pos + offset, RigidBodyVelocity { linvel, angvel });
         }
     }
 
@@ -655,8 +659,6 @@ impl<'a> Game<'a> {
 
     /// Spawns a planet with gates around it
     pub fn spawn_planet_with_gates(&mut self, position: NVector2, radius: f32, gate_count: u16) {
-        use std::f32::consts::PI;
-
         assert!(gate_count < 6, "Gate count must be less than 6");
 
         let hue = self.rng.gen::<f32>() * 250.;
@@ -681,7 +683,6 @@ impl<'a> Game<'a> {
 
     /// Spawns many planets at random positions with gates around them
     pub fn spawn_many_planets_with_gates(&mut self, num_gates: u16) {
-        use std::f32::consts::PI;
         let mut planets: Vec<(NVector2, f32)> = Vec::new();
 
         let radius_range = 300.0..700.0;
@@ -693,12 +694,13 @@ impl<'a> Game<'a> {
         while gates_left > 0 {
             let mut position_valid = false;
             let radius = self.rng.gen_range(radius_range.clone());
-            let distance = (last_radius + radius) * (3.0 + self.rng.gen::<f32>());
+            let mut distance = (last_radius + radius) * (3.0 + self.rng.gen::<f32>());
             let mut pos: NVector2 = vector![0., 0.];
             while !position_valid {
                 let angle = self.rng.gen::<f32>() * PI * 2.0;
                 let rot = Rotation::new(angle);
                 let offset = rot.into_inner() * distance;
+                distance *= 1.05;
                 pos = vector![offset.re, offset.im] + last_position;
 
                 // Check if planet too close to other planets
@@ -714,14 +716,18 @@ impl<'a> Game<'a> {
             }
 
             let mut gate_count =
-                ((self.rng.gen_range(1..6) + self.rng.gen_range(1..6)) as f32 * 0.5).ceil() as u16;
+                ((self.rng.gen_range(1..6) + self.rng.gen_range(0..6)) as f32 * 0.5).ceil() as u16;
+            if self.rng.gen_bool(0.3) {
+                gate_count = 0;
+            } else {
+                last_radius = radius;
+                last_position = pos;
+            }
             gate_count = gate_count.min(gates_left);
             gates_left -= gate_count;
             self.spawn_planet_with_gates(pos, radius, gate_count);
+            self.spawn_asteroids_around_planet(pos, radius);
             planets.push((pos, radius));
-
-            last_radius = radius;
-            last_position = pos;
         }
     }
 }
