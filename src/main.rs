@@ -15,7 +15,7 @@ use rand::prelude::*;
 
 fn main() {
     let levels_lengths: Vec<u16> = vec![8, 16, 24];
-    let levels_seeds: Vec<u64> = vec![4538, 1337, 45098372];
+    let levels_seeds: Vec<u64> = vec![4538, 1337, 22664];
     let levels_fuels: Vec<f32> = vec![400., 1000., 2000.];
 
     let window_width: i16 = 960 * 2;
@@ -57,7 +57,7 @@ fn main() {
                 let window_width = rl.get_screen_width() as i16;
                 let window_height = rl.get_screen_height() as i16;
                 let seed = if random {
-                    thread_rng().gen::<u64>()
+                    thread_rng().gen::<u16>() as u64
                 } else {
                     levels_seeds[level]
                 };
