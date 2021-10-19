@@ -1,7 +1,7 @@
 # TODO
 
 - Lava planets? (touch = die)
-- Asteroids?
+- Asteroids explosion effect
 - Pausing?
 - Some graphics
     - Rocket effect
