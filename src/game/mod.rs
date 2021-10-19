@@ -14,6 +14,8 @@ use rand_pcg::Pcg64;
 
 use std::f32::consts::PI;
 
+use std::collections::HashMap;
+
 /// Color of debug collider
 const COLL_COLOR: Color = Color {
     r: 70,
@@ -36,16 +38,18 @@ pub struct Game<'a> {
     physics_server: PhysicsServer,
     rigid_body_set: RigidBodySet,
     collider_set: ColliderSet,
-    process_objects: Vec<Rc<RefCell<dyn Processing>>>,
-    draw_objects: Vec<Rc<RefCell<dyn Drawable>>>,
-    phys_objects: Vec<Rc<RefCell<dyn PhysicsObject>>>,
-    planet_objects: Vec<Rc<RefCell<Planet>>>,
+    process_objects: HashMap<u128, Rc<RefCell<dyn Processing>>>,
+    draw_objects: HashMap<u128, Rc<RefCell<dyn Drawable>>>,
+    phys_objects: HashMap<u128, Rc<RefCell<dyn PhysicsObject>>>,
+    planet_objects: HashMap<u128, Rc<RefCell<Planet>>>,
+    asteroid_colliders: HashMap<ColliderHandle, u128>,
     gate_objects: Vec<Rc<RefCell<Gate>>>,
     player_rc: Option<Rc<RefCell<Player>>>,
     player_tex: WeakTexture2D,
     exhaust_tex: WeakTexture2D,
     player_score: i32,
     time_since_start: f32,
+    asteroid_spawn_timer: f32,
     completed: bool,
     camera: Camera2D,
     font: Font,
@@ -114,11 +118,12 @@ impl<'a> Game<'a> {
         let rigid_body_set = RigidBodySet::new();
         let collider_set = ColliderSet::new();
 
-        let process_objects: Vec<Rc<RefCell<dyn Processing>>> = Vec::new();
-        let draw_objects: Vec<Rc<RefCell<dyn Drawable>>> = Vec::new();
-        let phys_objects: Vec<Rc<RefCell<dyn PhysicsObject>>> = Vec::new();
-        let planet_objects: Vec<Rc<RefCell<Planet>>> = Vec::new();
+        let process_objects: HashMap<u128, Rc<RefCell<dyn Processing>>> = HashMap::new();
+        let draw_objects: HashMap<u128, Rc<RefCell<dyn Drawable>>> = HashMap::new();
+        let phys_objects: HashMap<u128, Rc<RefCell<dyn PhysicsObject>>> = HashMap::new();
+        let planet_objects: HashMap<u128, Rc<RefCell<Planet>>> = HashMap::new();
         let gate_objects: Vec<Rc<RefCell<Gate>>> = Vec::new();
+        let asteroid_colliders: HashMap<ColliderHandle, u128> = HashMap::new();
 
         let camera = Camera2D {
             offset: Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0),
@@ -151,11 +156,13 @@ impl<'a> Game<'a> {
             phys_objects,
             planet_objects,
             gate_objects,
+            asteroid_colliders,
             player_rc: None,
             player_tex,
             exhaust_tex,
             player_score: 30,
             time_since_start: 0.,
+            asteroid_spawn_timer: 0.,
             completed: false,
             camera,
             font,
@@ -168,10 +175,27 @@ impl<'a> Game<'a> {
         }
     }
 
+    pub fn remove_by_uuid(&mut self, uuid: &u128) {
+        self.process_objects.remove(uuid);
+        self.draw_objects.remove(uuid);
+        self.phys_objects.remove(uuid);
+        self.planet_objects.remove(uuid);
+    }
+
+    pub fn remove_rigidbody(&mut self, rigid_body: RigidBodyHandle) {
+        self.rigid_body_set.remove(
+            rigid_body,
+            &mut self.physics_server.island_manager,
+            &mut self.collider_set,
+            &mut self.physics_server.joint_set,
+        );
+    }
+
     pub fn unload(&mut self) {
         unsafe {
             self.rl.unload_texture(self.thread, self.player_tex.clone());
-            self.rl.unload_texture(self.thread, self.exhaust_tex.clone());
+            self.rl
+                .unload_texture(self.thread, self.exhaust_tex.clone());
             self.rl
                 .unload_texture(self.thread, self.asteroid_tex.clone());
             self.rl.unload_texture(self.thread, self.gate_tex.clone());
@@ -184,6 +208,7 @@ impl<'a> Game<'a> {
         if !self.completed {
             self.time_since_start += delta;
         }
+        self.asteroid_spawn_timer += delta;
 
         // Update camera center
         if self.rl.is_window_resized() {
@@ -192,6 +217,30 @@ impl<'a> Game<'a> {
             self.camera.offset =
                 Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0);
         }
+
+        let window_width = self.camera.offset.x * 2.0;
+        let window_height = self.camera.offset.y * 2.0;
+        let camera_diag =
+            ((window_width * window_width + window_height * window_height) as f32).sqrt();
+        let camera_diag_world = camera_diag / self.camera.zoom;
+        let view_r = camera_diag_world * 0.5;
+
+        // Spawning asteroids around the player
+        if self.asteroid_spawn_timer > 0.23 {
+            let r = view_r * (1.0 + self.rng.gen::<f32>());
+            let offset = Rotation::new(self.rng.gen::<f32>() * 2. * PI) * vector![0., 1.] * r;
+            let pos = to_nv2(self.camera.target) + offset;
+            let linvel = self.rng.gen_range(30.0..300.0)
+                * vector![
+                    self.rng.gen_range(-1.0..1.0f32),
+                    self.rng.gen_range(-1.0..1.0f32)
+                ]
+                .normalize();
+            let angvel = self.rng.gen_range(-10.0..10.0);
+            self.spawn_asteroid(pos, RigidBodyVelocity { linvel, angvel });
+            self.asteroid_spawn_timer = 0.;
+        }
+
         // Always center mouse
         self.rl.set_mouse_position(self.camera.offset);
 
@@ -210,20 +259,20 @@ impl<'a> Game<'a> {
         }
 
         // Processing
-        for object in &self.process_objects {
+        for object in self.process_objects.values() {
             object.borrow_mut().process(&mut self.rl, delta);
         }
 
         // Calculating gravity forces
         let mut planets_vector: Vec<(NVector2, f32)> = Vec::new();
-        for planet in self.planet_objects.iter() {
+        for planet in self.planet_objects.values() {
             let pos = planet.borrow().get_position();
             let mass = planet.borrow().get_mass();
             planets_vector.push((vector![pos.x, pos.y], mass));
         }
 
         // Pre physics
-        for object in self.phys_objects.iter_mut() {
+        for object in self.phys_objects.values_mut() {
             let body = &mut self.rigid_body_set[*object.borrow().get_body()];
             // Only calculate gravity for dynamic objects
             if body.is_dynamic() {
@@ -249,17 +298,59 @@ impl<'a> Game<'a> {
         self.physics_server
             .step(&mut self.rigid_body_set, &mut self.collider_set);
 
-        let mut contact_events = self
+        let mut contact_events_guard = self
             .physics_server
             .event_handler
             .contact_events
             .lock()
             .unwrap();
+
+        let mut contact_events = contact_events_guard.clone();
+        contact_events_guard.clear();
+        drop(contact_events_guard);
+
         for event in contact_events.drain(..) {
-            #[allow(unused_variables)]
             if let ContactEvent::Started(col1, col2) = event {
-                if !self.completed {
-                    self.player_score -= 10;
+                if let Some(pch) = self.physics_server.player_collider_handle {
+                    // One of them is the player
+                    if col1 == pch || col2 == pch {
+                        if !self.completed {
+                            self.player_score -= 10;
+                        }
+                    }
+                    // None of them is the player
+                    else {
+                        // Try to get uuids of asteroids
+                        let asteroid1_uuid = self.asteroid_colliders.get(&col1).cloned();
+                        let asteroid2_uuid = self.asteroid_colliders.get(&col2).cloned();
+                        // Ignore collisions between asteroids
+                        if asteroid1_uuid.is_some() && asteroid2_uuid.is_some() {
+                            continue;
+                        }
+                        // Destroy asteroids
+                        if let Some(asteroid1_uuid) = asteroid1_uuid {
+                            let asteroid_body = *self
+                                .phys_objects
+                                .get(&asteroid1_uuid)
+                                .unwrap()
+                                .borrow()
+                                .get_body();
+                            self.remove_rigidbody(asteroid_body);
+                            self.remove_by_uuid(&asteroid1_uuid);
+                            self.asteroid_colliders.remove(&col1);
+                        }
+                        if let Some(asteroid2_uuid) = asteroid2_uuid {
+                            let asteroid_body = *self
+                                .phys_objects
+                                .get(&asteroid2_uuid)
+                                .unwrap()
+                                .borrow()
+                                .get_body();
+                            self.remove_rigidbody(asteroid_body);
+                            self.remove_by_uuid(&asteroid2_uuid);
+                            self.asteroid_colliders.remove(&col2);
+                        }
+                    }
                 }
             }
         }
@@ -286,7 +377,7 @@ impl<'a> Game<'a> {
 
         // Update state of all physics objects
         // (This makes their position and rotation the same as their rigidbodies')
-        for object in self.phys_objects.iter_mut() {
+        for object in self.phys_objects.values_mut() {
             let body = &self.rigid_body_set[*object.borrow().get_body()];
             object.borrow_mut().update_state(body);
         }
@@ -306,14 +397,14 @@ impl<'a> Game<'a> {
 
         // Drawing
         let mut d = self.rl.begin_drawing(self.thread);
+        d.clear_background(self.bg_color);
 
         // Camera mode
         {
             let mut mode = d.begin_mode2D(self.camera);
-            mode.clear_background(self.bg_color);
 
             // Render gates first
-            for gate in self.gate_objects.iter() {
+            for gate in self.gate_objects.iter_mut() {
                 use std::cmp::Ordering;
 
                 let mut gate = gate.borrow_mut();
@@ -330,7 +421,7 @@ impl<'a> Game<'a> {
             }
 
             // Rendering objects
-            for object in &self.draw_objects {
+            for object in self.draw_objects.values() {
                 object.borrow().draw(&mut mode);
             }
 
@@ -358,7 +449,7 @@ impl<'a> Game<'a> {
 
             // Draw collisions
             if self.draw_collisions {
-                for object in self.phys_objects.iter() {
+                for object in self.phys_objects.values() {
                     let body = &self.rigid_body_set[*object.borrow().get_body()];
                     for collider in body.colliders() {
                         let collider = &self.collider_set[*collider];
@@ -533,10 +624,11 @@ impl<'a> Game<'a> {
 
         player.set_body(player_body_handle);
 
+        let uuid = player.get_uuid();
         let player_rc = Rc::new(RefCell::new(player));
-        self.process_objects.push(player_rc.clone());
-        self.draw_objects.push(player_rc.clone());
-        self.phys_objects.push(player_rc.clone());
+        self.process_objects.insert(uuid, player_rc.clone());
+        self.draw_objects.insert(uuid, player_rc.clone());
+        self.phys_objects.insert(uuid, player_rc.clone());
         self.player_rc = Some(player_rc);
     }
 
@@ -555,22 +647,30 @@ impl<'a> Game<'a> {
         let collider = ColliderBuilder::capsule_y(0.0, 13.0)
             .restitution(0.8)
             .density(0.5)
+            .active_events(ActiveEvents::CONTACT_EVENTS)
             .build();
 
+        let uuid = asteroid.get_uuid();
+
         let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
-        self.collider_set
-            .insert_with_parent(collider, rigid_body_handle, &mut self.rigid_body_set);
+
+        let col_handle = self.collider_set.insert_with_parent(
+            collider,
+            rigid_body_handle,
+            &mut self.rigid_body_set,
+        );
+        self.asteroid_colliders.insert(col_handle, uuid);
         asteroid.set_body(rigid_body_handle);
 
         let asteroid_rc = Rc::new(RefCell::new(asteroid));
-        self.process_objects.push(asteroid_rc.clone());
-        self.draw_objects.push(asteroid_rc.clone());
-        self.phys_objects.push(asteroid_rc);
+        self.process_objects.insert(uuid, asteroid_rc.clone());
+        self.draw_objects.insert(uuid, asteroid_rc.clone());
+        self.phys_objects.insert(uuid, asteroid_rc);
     }
 
     /// Spawns asteroids around given planet
     pub fn spawn_asteroids_around_planet(&mut self, planet_pos: NVector2, planet_radius: f32) {
-        let asteroid_count = self.rng.gen_range(20..40);
+        let asteroid_count = self.rng.gen_range(10..30);
         for _ in 0..asteroid_count {
             let rot = Rotation::new(self.rng.gen_range(0.0..2.0 * PI));
             let offset = rot * vector![1., 0.] * self.rng.gen_range(1.5..5.5) * planet_radius;
@@ -600,10 +700,11 @@ impl<'a> Game<'a> {
             .insert_with_parent(collider, rigid_body_handle, &mut self.rigid_body_set);
         planet.set_body(rigid_body_handle);
 
+        let uuid = planet.get_uuid();
         let planet_rc = Rc::new(RefCell::new(planet));
-        self.draw_objects.push(planet_rc.clone());
-        self.phys_objects.push(planet_rc.clone());
-        self.planet_objects.push(planet_rc);
+        self.draw_objects.insert(uuid, planet_rc.clone());
+        self.phys_objects.insert(uuid, planet_rc.clone());
+        self.planet_objects.insert(uuid, planet_rc);
     }
 
     /// Spawns a gate at given position
@@ -651,8 +752,9 @@ impl<'a> Game<'a> {
 
         gate.set_body(rigid_body_handle);
 
+        let uuid = gate.get_uuid();
         let gate_rc = Rc::new(RefCell::new(gate));
-        self.phys_objects.push(gate_rc.clone());
+        self.phys_objects.insert(uuid, gate_rc.clone());
         self.gate_objects.push(gate_rc);
 
         self.gate_count += 1;

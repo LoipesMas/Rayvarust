@@ -12,7 +12,7 @@ pub struct PhysicsServer {
     pub island_manager: IslandManager,
     broad_phase: BroadPhase,
     narrow_phase: NarrowPhase,
-    joint_set: JointSet,
+    pub joint_set: JointSet,
     ccd_solver: CCDSolver,
     physics_hooks: (),
     pub event_handler: MyEventHandler,

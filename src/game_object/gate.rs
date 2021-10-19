@@ -23,6 +23,10 @@ impl Gate {
             gate_num: 0,
         }
     }
+
+    pub fn get_uuid(&self) -> u128 {
+        self.game_object.get_uuid()
+    }
 }
 
 impl_spatial!(Gate);

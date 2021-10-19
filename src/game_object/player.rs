@@ -46,6 +46,9 @@ impl Player {
     pub fn get_zoom(&self) -> f32 {
         self.zoom
     }
+    pub fn get_uuid(&self) -> u128 {
+        self.game_object.get_uuid()
+    }
 }
 
 impl_spatial!(Player);
@@ -133,7 +136,7 @@ impl Processing for Player {
         if zoom_minus {
             self.zoom *= 1.0 + delta * 4.0;
         }
-        self.zoom = self.zoom.min(3.).max(0.18);
+        self.zoom = self.zoom.min(0.8).max(0.25);
     }
 }
 

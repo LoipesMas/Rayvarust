@@ -6,12 +6,16 @@ use crate::math::Transform2D;
 
 use rapier2d::prelude::*;
 
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+
 pub struct Planet {
     transform: Transform2D,
     radius: f32,
     physics_body: Option<RigidBodyHandle>,
     mass: f32,
     color: Color,
+    uuid: u128,
 }
 
 impl Planet {
@@ -25,11 +29,16 @@ impl Planet {
             physics_body: None,
             mass: 0.,
             color,
+            uuid: Pcg64::from_entropy().gen(),
         }
     }
 
     pub fn get_mass(&self) -> f32 {
         self.mass
+    }
+
+    pub fn get_uuid(&self) -> u128 {
+        self.uuid
     }
 }
 

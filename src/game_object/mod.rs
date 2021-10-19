@@ -19,7 +19,11 @@ pub use gate::{Gate, HIGHLIGHT_COLOR};
 
 use rapier2d::prelude::*;
 
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+
 pub struct GameObject {
+    uuid: u128,
     transform: Transform2D,
     pub sprite: Option<Sprite>,
     pub physics_body: Option<RigidBodyHandle>,
@@ -32,10 +36,15 @@ impl GameObject {
             rotation: 0.0,
         };
         GameObject {
+            uuid: Pcg64::from_entropy().gen(),
             transform,
             sprite: None,
             physics_body: None,
         }
+    }
+
+    pub fn get_uuid(&self) -> u128 {
+        self.uuid
     }
 }
 

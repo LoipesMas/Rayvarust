@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use raylib::prelude::*;
 mod math;
 
@@ -16,7 +18,7 @@ use rand::prelude::*;
 fn main() {
     let levels_lengths: Vec<u16> = vec![8, 16, 24];
     let levels_seeds: Vec<u64> = vec![4538, 1337, 22664];
-    let levels_fuels: Vec<f32> = vec![400., 1000., 2000.];
+    let levels_fuels: Vec<f32> = vec![333., 932., 1416.];
 
     let window_width: i16 = 960 * 2;
     let window_height: i16 = 540 * 2;
