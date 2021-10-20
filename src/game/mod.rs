@@ -226,7 +226,7 @@ impl<'a> Game<'a> {
         let view_r = camera_diag_world * 0.5;
 
         // Spawning asteroids around the player
-        if self.asteroid_spawn_timer > 0.23 {
+        if self.asteroid_spawn_timer > 0.23 && self.asteroid_colliders.len() < 200 {
             let r = view_r * (1.0 + self.rng.gen::<f32>());
             let offset = Rotation::new(self.rng.gen::<f32>() * 2. * PI) * vector![0., 1.] * r;
             let pos = to_nv2(self.camera.target) + offset;
@@ -356,7 +356,7 @@ impl<'a> Game<'a> {
         }
 
         // When player goes through a gate
-        if self.physics_server.player_intersected {
+        if !self.completed && self.physics_server.player_intersected {
             // Get collider
             if let Some(col_h) = self.physics_server.last_intersected {
                 // Get body
@@ -373,7 +373,16 @@ impl<'a> Game<'a> {
             }
         }
 
-        self.completed = self.next_gate >= self.gate_count;
+        if self.player_score < 0 {
+            if let Some(player) = &self.player_rc {
+                let mut player = player.borrow_mut();
+                player.failed = true;
+                self.completed = true;
+            }
+        }
+
+        self.completed |= self.next_gate >= self.gate_count;
+
 
         // Update state of all physics objects
         // (This makes their position and rotation the same as their rigidbodies')
@@ -646,7 +655,7 @@ impl<'a> Game<'a> {
             .build();
         let collider = ColliderBuilder::capsule_y(0.0, 13.0)
             .restitution(0.8)
-            .density(0.5)
+            .density(2.0)
             .active_events(ActiveEvents::CONTACT_EVENTS)
             .build();
 
@@ -693,7 +702,7 @@ impl<'a> Game<'a> {
             .translation(position)
             .can_sleep(false)
             .build();
-        let collider = ColliderBuilder::ball(radius).density(5.0).build();
+        let collider = ColliderBuilder::ball(radius).density(6.0).build();
 
         let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
         self.collider_set

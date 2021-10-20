@@ -20,6 +20,7 @@ pub struct Player {
     pub fuel: f32,
     pub fuel_mode: bool,
     pub level_completed: bool,
+    pub failed: bool,
 }
 
 #[allow(dead_code)]
@@ -41,6 +42,7 @@ impl Player {
             fuel: 10.,
             fuel_mode: false,
             level_completed: false,
+            failed: false,
         }
     }
     pub fn get_zoom(&self) -> f32 {
@@ -88,7 +90,7 @@ impl Processing for Player {
 
         self.move_vec = vector![0., 0.];
 
-        if self.fuel > 0. {
+        if self.fuel > 0. && !self.failed {
             let mut moves_count = 0;
             if move_u {
                 self.move_vec.y -= self.lin_speed * 3.0;
@@ -117,7 +119,7 @@ impl Processing for Player {
         let rot_r = rl.is_key_down(KeyboardKey::KEY_O);
 
         self.rot = 0.0;
-        if self.fuel > 0. {
+        if self.fuel > 0. && !self.failed {
             if rot_l {
                 self.rot -= self.ang_speed;
             }
