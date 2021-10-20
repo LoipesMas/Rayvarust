@@ -29,6 +29,7 @@ fn main() {
         .vsync()
         .build();
 
+    rl.set_target_fps(60);
     rl.set_exit_key(None);
 
     let mut restart = false;
