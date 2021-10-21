@@ -37,6 +37,7 @@ fn main() {
     let mut action = MenuAction::Start(0, true, false);
     let mut random_levels = false;
     let mut fuel_mode = false;
+    let mut seed = 0;
 
     while !quit {
         if !restart {
@@ -49,6 +50,7 @@ fn main() {
                 fuel_mode,
             );
             action = menu.run();
+            seed = 0;
         }
         restart = false;
 
@@ -59,11 +61,13 @@ fn main() {
                 let length = levels_lengths[level];
                 let window_width = rl.get_screen_width() as i16;
                 let window_height = rl.get_screen_height() as i16;
-                let seed = if random {
-                    thread_rng().gen::<u16>() as u64
-                } else {
-                    levels_seeds[level]
-                };
+                if seed == 0 {
+                    seed = if random {
+                        thread_rng().gen::<u16>() as u64
+                    } else {
+                        levels_seeds[level]
+                    };
+                }
                 let mut the_game = Game::new(
                     &mut rl,
                     &thread,
@@ -82,6 +86,10 @@ fn main() {
                     GameAction::Menu => {}
                     GameAction::Restart => {
                         restart = true;
+                    }
+                    GameAction::NewSeed => {
+                        restart = true;
+                        seed = 0;
                     }
                     GameAction::Quit => quit = true,
                 }

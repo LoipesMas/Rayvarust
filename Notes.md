@@ -1,6 +1,5 @@
 # TODO
 
-- Restart level with same seed?
 - Asteroids explosion effect
 - Lava planets? (touch = die)
 - Pausing?

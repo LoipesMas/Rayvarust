@@ -252,6 +252,10 @@ impl<'a> Game<'a> {
         if self.rl.is_key_pressed(KeyboardKey::KEY_R) {
             return Some(GameAction::Restart);
         }
+        // Restart game with new seed
+        if self.rl.is_key_pressed(KeyboardKey::KEY_N) {
+            return Some(GameAction::NewSeed);
+        }
 
         // For debug
         if self.rl.is_key_pressed(KeyboardKey::KEY_B) {
@@ -848,5 +852,6 @@ impl<'a> Game<'a> {
 pub enum GameAction {
     Menu,
     Restart,
+    NewSeed,
     Quit,
 }
