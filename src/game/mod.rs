@@ -59,6 +59,8 @@ pub struct Game<'a> {
     next_gate: u32,
     arrow: GameObject,
     arrow_tex: WeakTexture2D,
+    planet_shader: Shader,
+    def_shader: Shader,
 }
 
 impl<'a> Game<'a> {
@@ -111,6 +113,12 @@ impl<'a> Game<'a> {
                 .expect("Couldn't load arrow.png")
                 .make_weak()
         };
+
+        let planet_shader = rl
+            .load_shader(thread, None, Some("resources/shaders/planet.fs"))
+            .expect("Couldn't load shader");
+
+        let def_shader = rl.load_shader(thread, None, None).unwrap();
 
         let bg_color = color::rcolor(47, 40, 70, 255);
 
@@ -172,6 +180,8 @@ impl<'a> Game<'a> {
             next_gate: 0,
             arrow,
             arrow_tex,
+            planet_shader,
+            def_shader,
         }
     }
 
@@ -387,7 +397,6 @@ impl<'a> Game<'a> {
 
         self.completed |= self.next_gate >= self.gate_count;
 
-
         // Update state of all physics objects
         // (This makes their position and rotation the same as their rigidbodies')
         for object in self.phys_objects.values_mut() {
@@ -414,7 +423,21 @@ impl<'a> Game<'a> {
 
         // Camera mode
         {
-            let mut mode = d.begin_mode2D(self.camera);
+            let mut mode1 = d.begin_mode2D(self.camera);
+
+            let color_a_loc = self.planet_shader.get_shader_location("colorA");
+            let color_b_loc = self.planet_shader.get_shader_location("colorB");
+            for planet in self.planet_objects.values_mut() {
+                let planet = planet.borrow_mut();
+                self.planet_shader
+                    .set_shader_value(color_a_loc, planet.color_a.color_normalize());
+                self.planet_shader
+                    .set_shader_value(color_b_loc, planet.color_b.color_normalize());
+                let mut mode = mode1.begin_shader_mode(&self.planet_shader);
+                planet.draw(&mut mode);
+            }
+
+            let mut mode = mode1.begin_shader_mode(&self.def_shader);
 
             // Render gates first
             for gate in self.gate_objects.iter_mut() {
@@ -699,8 +722,21 @@ impl<'a> Game<'a> {
     }
 
     /// Spawns a planet at given position with given radius
-    pub fn spawn_planet(&mut self, position: NVector2, radius: f32, color: Color) {
-        let mut planet = Planet::new(to_rv2(position), 0., radius, color);
+    pub fn spawn_planet(
+        &mut self,
+        position: NVector2,
+        radius: f32,
+        color_a: Color,
+        color_b: Color,
+    ) {
+        let mut planet = Planet::new(
+            to_rv2(position),
+            0.,
+            radius,
+            color_a,
+            color_b,
+            self.asteroid_tex.clone(),
+        );
 
         let rigid_body = RigidBodyBuilder::new_static()
             .translation(position)
@@ -715,7 +751,6 @@ impl<'a> Game<'a> {
 
         let uuid = planet.get_uuid();
         let planet_rc = Rc::new(RefCell::new(planet));
-        self.draw_objects.insert(uuid, planet_rc.clone());
         self.phys_objects.insert(uuid, planet_rc.clone());
         self.planet_objects.insert(uuid, planet_rc);
     }
@@ -779,9 +814,12 @@ impl<'a> Game<'a> {
 
         let hue = self.rng.gen::<f32>() * 250.;
         let sat = self.rng.gen::<f32>() * 0.5 + 0.5;
-        let color = Color::color_from_hsv(hue, sat, 0.7);
+        let color_a = Color::color_from_hsv(hue, sat, 0.9);
+        let hue = self.rng.gen::<f32>() * 250.;
+        let sat = self.rng.gen::<f32>() * 0.5 + 0.5;
+        let color_b = Color::color_from_hsv(hue, sat, 0.5);
 
-        self.spawn_planet(position, radius, color);
+        self.spawn_planet(position, radius, color_a, color_b);
 
         let direction = (self.rng.gen::<f32>() - 0.5).signum();
 

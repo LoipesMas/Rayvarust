@@ -56,7 +56,7 @@ impl Player {
 impl_spatial!(Player);
 
 impl Drawable for Player {
-    fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>) {
+    fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibDrawHandle>>) {
         if self.move_vec.y < 0. {
             let mut exhaust_transform = self.game_object.transform;
             let rot = Rotation::new(exhaust_transform.rotation);

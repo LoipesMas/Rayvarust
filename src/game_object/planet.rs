@@ -1,4 +1,4 @@
-use super::{Drawable, PhysicsObject, Spatial};
+use super::{Drawable, PhysicsObject, Spatial, Sprite};
 
 use raylib::prelude::*;
 
@@ -14,22 +14,34 @@ pub struct Planet {
     radius: f32,
     physics_body: Option<RigidBodyHandle>,
     mass: f32,
-    color: Color,
+    pub color_a: Color,
+    pub color_b: Color,
     uuid: u128,
+    sprite: Sprite,
 }
 
 impl Planet {
     #[allow(dead_code)]
-    pub fn new(position: Vector2, rotation: f32, radius: f32, color: Color) -> Self {
+    pub fn new(
+        position: Vector2,
+        rotation: f32,
+        radius: f32,
+        color_a: Color,
+        color_b: Color,
+        texture: WeakTexture2D,
+    ) -> Self {
         let transform = Transform2D { position, rotation };
+        let mut sprite = Sprite::new(texture, true, radius / 48.0);
 
         Planet {
             transform,
             radius,
             physics_body: None,
             mass: 0.,
-            color,
+            color_a,
+            color_b,
             uuid: Pcg64::from_entropy().gen(),
+            sprite,
         }
     }
 
@@ -61,8 +73,8 @@ impl Spatial for Planet {
 }
 
 impl Drawable for Planet {
-    fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>) {
-        rl.draw_circle_v(self.get_position(), self.radius, self.color);
+    fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibDrawHandle>>) {
+        self.sprite.draw(rl, &self.transform)
     }
 
     fn get_scale(&self) -> f32 {

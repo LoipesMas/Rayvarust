@@ -87,7 +87,11 @@ impl Sprite {
         }
     }
 
-    pub fn draw(&self, rl: &mut RaylibMode2D<RaylibDrawHandle>, transform: &Transform2D) {
+    pub fn draw(
+        &self,
+        rl: &mut RaylibShaderMode<RaylibMode2D<RaylibDrawHandle>>,
+        transform: &Transform2D,
+    ) {
         let mut dest_rec = self.dest_rec;
         dest_rec.x = transform.position.x;
         dest_rec.y = transform.position.y;
