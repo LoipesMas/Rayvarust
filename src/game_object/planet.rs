@@ -11,7 +11,6 @@ use rand_pcg::Pcg64;
 
 pub struct Planet {
     transform: Transform2D,
-    radius: f32,
     physics_body: Option<RigidBodyHandle>,
     mass: f32,
     pub color_a: Color,
@@ -31,11 +30,10 @@ impl Planet {
         texture: WeakTexture2D,
     ) -> Self {
         let transform = Transform2D { position, rotation };
-        let mut sprite = Sprite::new(texture, true, radius / 48.0);
+        let sprite = Sprite::new(texture, true, radius / 48.0);
 
         Planet {
             transform,
-            radius,
             physics_body: None,
             mass: 0.,
             color_a,

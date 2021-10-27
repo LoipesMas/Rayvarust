@@ -46,9 +46,6 @@ float value_noise(vec2 st)
     mat2 rot = mat2(vec2(1.2, 1.6), vec2(1.6, -1.2));
     f += a*noise(st); st *= rot; a *= 0.5; st *= 1.5;
     f += a*noise(st); st *= rot; a *= 0.5; st *= 1.5;
-    f += a*noise(st); st *= rot; a *= 0.5; st *= 1.5;
-    f += a*noise(st); st *= rot; a *= 0.5; st *= 1.5;
-    f += a*noise(st); st *= rot; a *= 0.5; st *= 1.5;
     return f;
 }
 
@@ -71,22 +68,13 @@ void main()
     float rot_angle = PI*1.618;
     float r = length(st)*2.;
     float angle = atan(st.x, st.y)/(2.*PI);
-    //float r_a = r;
-    //r_a *= (1.+hills_1_a*sin((angle)*round(hills_1_d)*2.*PI));
-    //r_a *= (1.+hills_2_a*sin((angle)*round(hills_2_d)*2.*PI));
-    //r_a *= (1.+hills_3_a*sin((angle)*round(hills_3_d)*2.*PI));
     float a = float(r < rad_thresh);
     
-	//float a = 0.;
-	//for (int i = 0; i<blur; ++i){
-	//for (int j = 0; j<blur; ++j){ 
-	//    a += texture(mask,UV+vec2(float(i),float(j))*TEXTURE_PIXEL_SIZE).a;
-	//}    
-	//}
-	//a /= float(blur*blur);
-    
     float f = 0.;
-    f = value_noise(vec2(abs(angle)*80.,mix(r*radius,r*radius,r/radius)));
+    f = value_noise(vec2(abs(angle)*60., r*radius+colorA.g));
+
+	//sigmoid
+	f = 1.0/(1.0+pow(2.2718, -f));
     
     vec3 color = mix(colorA, colorB, f).rgb;
 	finalColor = vec4(color, a)*colDiffuse;

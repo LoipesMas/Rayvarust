@@ -30,7 +30,6 @@ pub struct Game<'a> {
     rl: &'a mut RaylibHandle,
     thread: &'a RaylibThread,
     rng: Pcg64,
-    seed: u64,
     fuel_mode: bool,
     draw_fps: bool,
     draw_collisions: bool,
@@ -151,7 +150,6 @@ impl<'a> Game<'a> {
             rl,
             thread,
             rng: Pcg64::seed_from_u64(seed),
-            seed,
             fuel_mode,
             draw_fps,
             draw_collisions,
@@ -523,15 +521,6 @@ impl<'a> Game<'a> {
                     Color::WHITE,
                 );
             }
-            d.draw_text_ex(
-                &self.font,
-                &self.seed.to_string(),
-                Vector2::new(1750., 50.),
-                50.0,
-                1.0,
-                Color::WHITE,
-            );
-
             let mut line = -1.;
 
             // Player score
@@ -742,7 +731,7 @@ impl<'a> Game<'a> {
             .translation(position)
             .can_sleep(false)
             .build();
-        let collider = ColliderBuilder::ball(radius).density(6.0).build();
+        let collider = ColliderBuilder::ball(radius).density(8.0).build();
 
         let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
         self.collider_set
@@ -816,8 +805,8 @@ impl<'a> Game<'a> {
         let sat = self.rng.gen::<f32>() * 0.5 + 0.5;
         let color_a = Color::color_from_hsv(hue, sat, 0.9);
         let hue = self.rng.gen::<f32>() * 250.;
-        let sat = self.rng.gen::<f32>() * 0.5 + 0.5;
-        let color_b = Color::color_from_hsv(hue, sat, 0.5);
+        let sat = self.rng.gen::<f32>() * 0.5;
+        let color_b = Color::color_from_hsv(hue, sat, 0.1);
 
         self.spawn_planet(position, radius, color_a, color_b);
 
