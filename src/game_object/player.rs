@@ -155,7 +155,11 @@ impl PhysicsObject for Player {
         let rot = Rotation::new(self.get_rotation());
         let move_vec = rot * self.move_vec;
         body.set_linvel(body.linvel() + move_vec * delta, true);
-        body.set_angvel(body.angvel() + self.rot * delta, true);
+        let mut angvel = body.angvel() + self.rot * delta;
+        if angvel > 3.0 {
+            angvel /= 1.0 + delta;
+        }
+        body.set_angvel(angvel, true);
         self.game_object.physics_process(delta, body);
     }
 
