@@ -199,6 +199,31 @@ impl<'a> Game<'a> {
         );
     }
 
+    pub fn remove_asteroid(&mut self, uuid: &u128, col: &ColliderHandle) {
+        let asteroid_body = *self.phys_objects.get(uuid).unwrap().borrow().get_body();
+        let scale = self.draw_objects.get(uuid).unwrap().borrow().get_scale();
+        let rigid_body = self.rigid_body_set.get(asteroid_body).unwrap();
+        let pos = *rigid_body.translation();
+        let vel = *rigid_body.linvel();
+        let dir = vel.normalize();
+        if scale > 0.3 {
+            // Spawn more smaller asteroids
+            for _ in 0..self.rng.gen_range(2..4) {
+                // Random velocities
+                let speed = vel.norm() * self.rng.gen_range(0.6..1.3);
+                let rot = Rotation::new(PI * self.rng.gen_range(0.5..1.5));
+                let linvel = (rot * dir) * speed;
+                let angvel = self.rng.gen_range(-10.0..10.0);
+                let new_scale = scale * self.rng.gen_range(0.3..0.8);
+
+                self.spawn_asteroid(pos - dir, new_scale, RigidBodyVelocity { linvel, angvel });
+            }
+        }
+        self.remove_rigidbody(asteroid_body);
+        self.remove_by_uuid(uuid);
+        self.asteroid_colliders.remove(col);
+    }
+
     pub fn unload(&mut self) {
         unsafe {
             self.rl.unload_texture(self.thread, self.player_tex.clone());
@@ -234,7 +259,7 @@ impl<'a> Game<'a> {
         let view_r = camera_diag_world * 0.5;
 
         // Spawning asteroids around the player
-        if self.asteroid_spawn_timer > 0.23 && self.asteroid_colliders.len() < 200 {
+        if self.asteroid_spawn_timer > 0.4 && self.asteroid_colliders.len() < 200 {
             let r = view_r * (1.0 + self.rng.gen::<f32>());
             let offset = Rotation::new(self.rng.gen::<f32>() * 2. * PI) * vector![0., 1.] * r;
             let pos = to_nv2(self.camera.target) + offset;
@@ -245,7 +270,8 @@ impl<'a> Game<'a> {
                 ]
                 .normalize();
             let angvel = self.rng.gen_range(-10.0..10.0);
-            self.spawn_asteroid(pos, RigidBodyVelocity { linvel, angvel });
+            let scale = self.rng.gen_range(0.2..0.6);
+            self.spawn_asteroid(pos, scale, RigidBodyVelocity { linvel, angvel });
             self.asteroid_spawn_timer = 0.;
         }
 
@@ -341,26 +367,10 @@ impl<'a> Game<'a> {
                         }
                         // Destroy asteroids
                         if let Some(asteroid1_uuid) = asteroid1_uuid {
-                            let asteroid_body = *self
-                                .phys_objects
-                                .get(&asteroid1_uuid)
-                                .unwrap()
-                                .borrow()
-                                .get_body();
-                            self.remove_rigidbody(asteroid_body);
-                            self.remove_by_uuid(&asteroid1_uuid);
-                            self.asteroid_colliders.remove(&col1);
+                            self.remove_asteroid(&asteroid1_uuid, &col1);
                         }
                         if let Some(asteroid2_uuid) = asteroid2_uuid {
-                            let asteroid_body = *self
-                                .phys_objects
-                                .get(&asteroid2_uuid)
-                                .unwrap()
-                                .borrow()
-                                .get_body();
-                            self.remove_rigidbody(asteroid_body);
-                            self.remove_by_uuid(&asteroid2_uuid);
-                            self.asteroid_colliders.remove(&col2);
+                            self.remove_asteroid(&asteroid2_uuid, &col2);
                         }
                     }
                 }
@@ -658,9 +668,14 @@ impl<'a> Game<'a> {
     }
 
     /// Spawns an asteroid at given position
-    pub fn spawn_asteroid(&mut self, position: NVector2, velocities: RigidBodyVelocity) {
+    pub fn spawn_asteroid(
+        &mut self,
+        position: NVector2,
+        scale: f32,
+        velocities: RigidBodyVelocity,
+    ) {
         let mut asteroid = GameObject::new();
-        asteroid.sprite = Some(Sprite::new(self.asteroid_tex.clone(), true, 0.3));
+        asteroid.sprite = Some(Sprite::new(self.asteroid_tex.clone(), true, scale));
 
         let rigid_body = RigidBodyBuilder::new_dynamic()
             .translation(position)
@@ -669,7 +684,7 @@ impl<'a> Game<'a> {
             .angvel(velocities.angvel)
             .can_sleep(false)
             .build();
-        let collider = ColliderBuilder::capsule_y(0.0, 13.0)
+        let collider = ColliderBuilder::capsule_y(0.0, 40.0 * scale)
             .restitution(0.8)
             .density(2.0)
             .active_events(ActiveEvents::CONTACT_EVENTS)
@@ -706,7 +721,12 @@ impl<'a> Game<'a> {
                 ]
                 .normalize();
             let angvel = self.rng.gen_range(-10.0..10.0);
-            self.spawn_asteroid(planet_pos + offset, RigidBodyVelocity { linvel, angvel });
+            let scale = self.rng.gen_range(0.2..0.6);
+            self.spawn_asteroid(
+                planet_pos + offset,
+                scale,
+                RigidBodyVelocity { linvel, angvel },
+            );
         }
     }
 
