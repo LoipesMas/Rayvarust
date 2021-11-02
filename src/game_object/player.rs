@@ -27,7 +27,7 @@ pub struct Player {
 impl Player {
     pub fn new(main_texture: WeakTexture2D, exhaust_texture: WeakTexture2D) -> Self {
         let mut game_object = GameObject::new();
-        game_object.sprite = Some(Sprite::new(main_texture, true, 0.7));
+        game_object.sprite = Some(Sprite::new(main_texture, true, 0.35));
         let exhaust_sprite = Sprite::new(exhaust_texture, true, 0.475);
 
         Player {

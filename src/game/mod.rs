@@ -84,8 +84,8 @@ impl<'a> Game<'a> {
             .expect("Couldn't load font");
 
         let player_tex = unsafe {
-            rl.load_texture(thread, "resources/textures/spaceship.png")
-                .expect("Couldn't load spaceship.png")
+            rl.load_texture(thread, "resources/textures/ships/ship_red.png")
+                .expect("Couldn't load spaceship image")
                 .make_weak()
         };
 
