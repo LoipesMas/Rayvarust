@@ -89,7 +89,7 @@ impl Sprite {
 
     pub fn draw(
         &self,
-        rl: &mut RaylibShaderMode<RaylibMode2D<RaylibDrawHandle>>,
+        rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>,
         transform: &Transform2D,
     ) {
         let mut dest_rec = self.dest_rec;

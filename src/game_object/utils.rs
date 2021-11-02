@@ -26,7 +26,7 @@ macro_rules! impl_spatial {
 macro_rules! impl_drawable {
     ($x:tt) => {
         impl Drawable for $x {
-            fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibDrawHandle>>) {
+            fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>) {
                 self.game_object.draw(rl);
             }
 

@@ -71,7 +71,7 @@ impl Spatial for Planet {
 }
 
 impl Drawable for Planet {
-    fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibDrawHandle>>) {
+    fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>) {
         self.sprite.draw(rl, &self.transform)
     }
 

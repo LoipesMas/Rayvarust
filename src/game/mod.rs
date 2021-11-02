@@ -59,6 +59,7 @@ pub struct Game<'a> {
     arrow: GameObject,
     arrow_tex: WeakTexture2D,
     planet_shader: Shader,
+    blur_shader: Shader,
     def_shader: Shader,
 }
 
@@ -117,6 +118,10 @@ impl<'a> Game<'a> {
             .load_shader(thread, None, Some("resources/shaders/planet.fs"))
             .expect("Couldn't load shader");
 
+        let blur_shader = rl
+            .load_shader(thread, None, Some("resources/shaders/blur.fs"))
+            .expect("Couldn't load shader");
+
         let def_shader = rl.load_shader(thread, None, None).unwrap();
 
         let bg_color = color::rcolor(47, 40, 70, 255);
@@ -133,7 +138,7 @@ impl<'a> Game<'a> {
         let asteroid_colliders: HashMap<ColliderHandle, u128> = HashMap::new();
 
         let camera = Camera2D {
-            offset: Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0),
+            offset: Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0) * 2.0,
             target: Vector2::new(0., 0.),
             rotation: 0.,
             zoom: 0.66,
@@ -179,6 +184,7 @@ impl<'a> Game<'a> {
             arrow,
             arrow_tex,
             planet_shader,
+            blur_shader,
             def_shader,
         }
     }
@@ -276,7 +282,7 @@ impl<'a> Game<'a> {
         }
 
         // Always center mouse
-        self.rl.set_mouse_position(self.camera.offset);
+        self.rl.set_mouse_position(self.camera.offset / 2.0);
 
         // Go back to menu
         if self.rl.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
@@ -425,98 +431,116 @@ impl<'a> Game<'a> {
             self.camera.zoom = player_rc.borrow().get_zoom();
         }
 
-        // Drawing
+        let mut ren_tex = self.rl.load_render_texture(self.thread, 1920*2, 1080*2).unwrap();
         let mut d = self.rl.begin_drawing(self.thread);
         d.clear_background(self.bg_color);
 
-        // Camera mode
+        // Drawing to texture
         {
-            let mut mode1 = d.begin_mode2D(self.camera);
+            let mut d = d.begin_texture_mode(self.thread, &mut ren_tex);
+            //let mut d = self.rl.begin_drawing(self.thread);
+            d.clear_background(self.bg_color);
 
-            let color_a_loc = self.planet_shader.get_shader_location("colorA");
-            let color_b_loc = self.planet_shader.get_shader_location("colorB");
-            for planet in self.planet_objects.values_mut() {
-                let planet = planet.borrow_mut();
-                self.planet_shader
-                    .set_shader_value(color_a_loc, planet.color_a.color_normalize());
-                self.planet_shader
-                    .set_shader_value(color_b_loc, planet.color_b.color_normalize());
-                let mut mode = mode1.begin_shader_mode(&self.planet_shader);
-                planet.draw(&mut mode);
-            }
+            // Camera mode
+            {
+                let mut mode1 = d.begin_mode2D(self.camera);
 
-            let mut mode = mode1.begin_shader_mode(&self.def_shader);
+                let color_a_loc = self.planet_shader.get_shader_location("colorA");
+                let color_b_loc = self.planet_shader.get_shader_location("colorB");
+                for planet in self.planet_objects.values_mut() {
+                    let planet = planet.borrow_mut();
+                    self.planet_shader
+                        .set_shader_value(color_a_loc, planet.color_a.color_normalize());
+                    self.planet_shader
+                        .set_shader_value(color_b_loc, planet.color_b.color_normalize());
+                    let mut mode = mode1.begin_shader_mode(&self.planet_shader);
+                    planet.draw(&mut mode);
+                }
 
-            // Render gates first
-            for gate in self.gate_objects.iter_mut() {
-                use std::cmp::Ordering;
+                let mut mode = mode1.begin_shader_mode(&self.def_shader);
 
-                let mut gate = gate.borrow_mut();
+                // Render gates first
+                for gate in self.gate_objects.iter_mut() {
+                    use std::cmp::Ordering;
 
-                // Color based on whether the gate is past/current/future
-                let color = match gate.gate_num.cmp(&self.next_gate) {
-                    Ordering::Less => Color::GRAY,
-                    Ordering::Equal => HIGHLIGHT_COLOR,
-                    Ordering::Greater => Color::WHITE,
-                };
-                gate.set_tint(color);
+                    let mut gate = gate.borrow_mut();
 
-                gate.draw(&mut mode);
-            }
+                    // Color based on whether the gate is past/current/future
+                    let color = match gate.gate_num.cmp(&self.next_gate) {
+                        Ordering::Less => Color::GRAY,
+                        Ordering::Equal => HIGHLIGHT_COLOR,
+                        Ordering::Greater => Color::WHITE,
+                    };
+                    gate.set_tint(color);
 
-            // Rendering objects
-            for object in self.draw_objects.values() {
-                object.borrow().draw(&mut mode);
-            }
+                    gate.draw(&mut mode);
+                }
 
-            // Draw arrow to next gate
-            if !self.completed {
-                if let Some(player) = &self.player_rc {
-                    let player = player.borrow();
-                    let pl_pos = player.get_position();
-                    let next_pos = self
-                        .gate_objects
-                        .get(self.next_gate as usize)
-                        .unwrap()
-                        .borrow()
-                        .get_position();
-                    let dir = pl_pos - next_pos;
-                    if dir.length() > 256.0 {
-                        let angle = dir.angle_to(Vector2::new(-1., 0.));
-                        let pos = pl_pos - dir.normalized() * 64.0;
-                        self.arrow.set_position(pos);
-                        self.arrow.set_rotation(angle);
-                        self.arrow.draw(&mut mode);
+                // Rendering objects
+                for object in self.draw_objects.values() {
+                    object.borrow().draw(&mut mode);
+                }
+
+                // Draw arrow to next gate
+                if !self.completed {
+                    if let Some(player) = &self.player_rc {
+                        let player = player.borrow();
+                        let pl_pos = player.get_position();
+                        let next_pos = self
+                            .gate_objects
+                            .get(self.next_gate as usize)
+                            .unwrap()
+                            .borrow()
+                            .get_position();
+                        let dir = pl_pos - next_pos;
+                        if dir.length() > 256.0 {
+                            let angle = dir.angle_to(Vector2::new(-1., 0.));
+                            let pos = pl_pos - dir.normalized() * 64.0;
+                            self.arrow.set_position(pos);
+                            self.arrow.set_rotation(angle);
+                            self.arrow.draw(&mut mode);
+                        }
                     }
                 }
-            }
 
-            // Draw collisions
-            if self.draw_collisions {
-                for object in self.phys_objects.values() {
-                    let body = &self.rigid_body_set[*object.borrow().get_body()];
-                    for collider in body.colliders() {
-                        let collider = &self.collider_set[*collider];
-                        let aabb = collider.shape().compute_local_aabb();
-                        let h_width = aabb.half_extents()[0];
-                        let h_height = aabb.half_extents()[1];
-                        let rec = Rectangle::new(
-                            collider.translation().x,
-                            collider.translation().y,
-                            h_width * 2.0,
-                            h_height * 2.0,
-                        );
-                        let origin = Vector2::new(h_width, h_height);
-                        mode.draw_rectangle_pro(
-                            rec,
-                            origin,
-                            RAD2DEG as f32 * body.rotation().angle(),
-                            COLL_COLOR,
-                        );
+                // Draw collisions
+                if self.draw_collisions {
+                    for object in self.phys_objects.values() {
+                        let body = &self.rigid_body_set[*object.borrow().get_body()];
+                        for collider in body.colliders() {
+                            let collider = &self.collider_set[*collider];
+                            let aabb = collider.shape().compute_local_aabb();
+                            let h_width = aabb.half_extents()[0];
+                            let h_height = aabb.half_extents()[1];
+                            let rec = Rectangle::new(
+                                collider.translation().x,
+                                collider.translation().y,
+                                h_width * 2.0,
+                                h_height * 2.0,
+                            );
+                            let origin = Vector2::new(h_width, h_height);
+                            mode.draw_rectangle_pro(
+                                rec,
+                                origin,
+                                RAD2DEG as f32 * body.rotation().angle(),
+                                COLL_COLOR,
+                            );
+                        }
                     }
                 }
             }
         }
+
+        //let mut d = self.rl.begin_drawing(self.thread);
+        // NOTE: Render texture must be y-flipped due to default OpenGL coordinates (left-bottom)
+        d.draw_texture_pro(
+            ren_tex.texture(),
+            rrect(0, 0, ren_tex.texture.width, -ren_tex.texture.height),
+            rrect(0, 0, ren_tex.texture.width/2, ren_tex.texture.height/2),
+            rvec2(0,0),//rvec2(ren_tex.texture.width/2, ren_tex.texture.height/2),
+            0.,
+            Color::WHITE,
+        );
 
         // Draw UI
         {
