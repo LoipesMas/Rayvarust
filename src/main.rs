@@ -54,6 +54,7 @@ fn main() {
                 selected_ship,
             );
             action = menu.run();
+            menu.unload();
             selected_ship = menu.selected_ship;
             seed = 0;
         }

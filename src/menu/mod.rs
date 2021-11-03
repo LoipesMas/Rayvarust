@@ -210,6 +210,14 @@ impl<'a> Menu<'a> {
         }
         MenuAction::Quit
     }
+
+    pub fn unload(&mut self) {
+        unsafe {
+            for tex in &self.ship_textures {
+                self.rl.unload_texture(self.thread, tex.clone());
+            }
+        }
+    }
 }
 
 #[derive(PartialEq, Eq)]
