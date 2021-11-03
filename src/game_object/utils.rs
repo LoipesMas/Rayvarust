@@ -26,7 +26,10 @@ macro_rules! impl_spatial {
 macro_rules! impl_drawable {
     ($x:tt) => {
         impl Drawable for $x {
-            fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>) {
+            fn draw(
+                &self,
+                rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>,
+            ) {
                 self.game_object.draw(rl);
             }
 
@@ -40,6 +43,10 @@ macro_rules! impl_drawable {
 
             fn set_tint(&mut self, tint: Color) {
                 self.game_object.set_tint(tint);
+            }
+
+            fn get_transform(&self) -> Transform2D {
+                self.game_object.get_transform()
             }
         }
     };

@@ -1,4 +1,5 @@
 use crate::math::{lerp, to_nv2, to_rv2, NVector2};
+use crate::SHIP_NAMES;
 use rapier2d::prelude::*;
 use raylib::prelude::*;
 use std::cell::RefCell;
@@ -26,6 +27,8 @@ const COLL_COLOR: Color = Color {
 
 const G: f32 = 10.0;
 
+const RENDER_DISTANCE: f32 = 12000i32.pow(2) as f32;
+
 pub struct Game<'a> {
     rl: &'a mut RaylibHandle,
     thread: &'a RaylibThread,
@@ -33,6 +36,7 @@ pub struct Game<'a> {
     fuel_mode: bool,
     draw_fps: bool,
     draw_collisions: bool,
+    blur: bool,
     bg_color: Color,
     physics_server: PhysicsServer,
     rigid_body_set: RigidBodySet,
@@ -61,6 +65,7 @@ pub struct Game<'a> {
     planet_shader: Shader,
     blur_shader: Shader,
     def_shader: Shader,
+    ren_tex: RenderTexture2D,
 }
 
 impl<'a> Game<'a> {
@@ -71,9 +76,11 @@ impl<'a> Game<'a> {
         window_height: i16,
         seed: u64,
         fuel_mode: bool,
+        selected_ship: usize,
     ) -> Self {
         let draw_fps = true;
         let draw_collisions = false;
+        let blur = true;
 
         let font = rl
             .load_font_ex(
@@ -84,10 +91,14 @@ impl<'a> Game<'a> {
             )
             .expect("Couldn't load font");
 
+        let ship_name = SHIP_NAMES[selected_ship];
         let player_tex = unsafe {
-            rl.load_texture(thread, "resources/textures/ships/ship_red.png")
-                .expect("Couldn't load spaceship image")
-                .make_weak()
+            rl.load_texture(
+                thread,
+                &("resources/textures/ships/".to_owned() + ship_name + ".png"),
+            )
+            .expect("Couldn't load spaceship image")
+            .make_weak()
         };
 
         let exhaust_tex = unsafe {
@@ -118,9 +129,17 @@ impl<'a> Game<'a> {
             .load_shader(thread, None, Some("resources/shaders/planet.fs"))
             .expect("Couldn't load shader");
 
-        let blur_shader = rl
+        let mut blur_shader = rl
             .load_shader(thread, None, Some("resources/shaders/blur.fs"))
             .expect("Couldn't load shader");
+
+        // Update blur shader uniforms
+        {
+            let loc_w = blur_shader.get_shader_location("renderWidth");
+            let loc_h = blur_shader.get_shader_location("renderHeight");
+            blur_shader.set_shader_value(loc_w, window_width as f32 * 2.0);
+            blur_shader.set_shader_value(loc_h, window_height as f32 * 2.0);
+        }
 
         let def_shader = rl.load_shader(thread, None, None).unwrap();
 
@@ -151,6 +170,10 @@ impl<'a> Game<'a> {
         let mut arrow = GameObject::new();
         arrow.sprite = Some(Sprite::new(arrow_tex.clone(), true, 0.5));
 
+        let ren_tex = rl
+            .load_render_texture(thread, window_width as u32 * 2, window_height as u32 * 2)
+            .unwrap();
+
         Game {
             rl,
             thread,
@@ -158,6 +181,7 @@ impl<'a> Game<'a> {
             fuel_mode,
             draw_fps,
             draw_collisions,
+            blur,
             bg_color,
             physics_server,
             rigid_body_set,
@@ -186,6 +210,7 @@ impl<'a> Game<'a> {
             planet_shader,
             blur_shader,
             def_shader,
+            ren_tex,
         }
     }
 
@@ -254,7 +279,17 @@ impl<'a> Game<'a> {
             let window_width = self.rl.get_screen_width();
             let window_height = self.rl.get_screen_height();
             self.camera.offset =
-                Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0);
+                Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0) * 2.0;
+
+            // Update blur shader uniforms
+            {
+                let loc_w = self.blur_shader.get_shader_location("renderWidth");
+                let loc_h = self.blur_shader.get_shader_location("renderHeight");
+                self.blur_shader
+                    .set_shader_value(loc_w, window_width as f32 * 2.0);
+                self.blur_shader
+                    .set_shader_value(loc_h, window_height as f32 * 2.0);
+            }
         }
 
         let window_width = self.camera.offset.x * 2.0;
@@ -297,8 +332,13 @@ impl<'a> Game<'a> {
             return Some(GameAction::NewSeed);
         }
 
-        // For debug
+        // Toggle upscaling
         if self.rl.is_key_pressed(KeyboardKey::KEY_B) {
+            self.blur ^= true;
+        }
+
+        // For debug
+        if self.rl.is_key_pressed(KeyboardKey::KEY_C) {
             self.draw_collisions ^= true;
         }
 
@@ -431,13 +471,12 @@ impl<'a> Game<'a> {
             self.camera.zoom = player_rc.borrow().get_zoom();
         }
 
-        let mut ren_tex = self.rl.load_render_texture(self.thread, 1920*2, 1080*2).unwrap();
         let mut d = self.rl.begin_drawing(self.thread);
         d.clear_background(self.bg_color);
 
         // Drawing to texture
         {
-            let mut d = d.begin_texture_mode(self.thread, &mut ren_tex);
+            let mut d = d.begin_texture_mode(self.thread, &mut self.ren_tex);
             //let mut d = self.rl.begin_drawing(self.thread);
             d.clear_background(self.bg_color);
 
@@ -449,6 +488,10 @@ impl<'a> Game<'a> {
                 let color_b_loc = self.planet_shader.get_shader_location("colorB");
                 for planet in self.planet_objects.values_mut() {
                     let planet = planet.borrow_mut();
+                    let dist = (planet.get_position() - self.camera.target).length_sqr();
+                    if dist > RENDER_DISTANCE {
+                        continue;
+                    }
                     self.planet_shader
                         .set_shader_value(color_a_loc, planet.color_a.color_normalize());
                     self.planet_shader
@@ -465,6 +508,11 @@ impl<'a> Game<'a> {
 
                     let mut gate = gate.borrow_mut();
 
+                    let dist = (gate.get_position() - self.camera.target).length_sqr();
+                    if dist > RENDER_DISTANCE {
+                        continue;
+                    }
+
                     // Color based on whether the gate is past/current/future
                     let color = match gate.gate_num.cmp(&self.next_gate) {
                         Ordering::Less => Color::GRAY,
@@ -478,7 +526,13 @@ impl<'a> Game<'a> {
 
                 // Rendering objects
                 for object in self.draw_objects.values() {
-                    object.borrow().draw(&mut mode);
+                    let object = object.borrow();
+                    let dist = (object.get_transform().position - self.camera.target).length_sqr();
+                    if dist > RENDER_DISTANCE {
+                        continue;
+                    }
+
+                    object.draw(&mut mode);
                 }
 
                 // Draw arrow to next gate
@@ -531,16 +585,31 @@ impl<'a> Game<'a> {
             }
         }
 
-        //let mut d = self.rl.begin_drawing(self.thread);
-        // NOTE: Render texture must be y-flipped due to default OpenGL coordinates (left-bottom)
-        d.draw_texture_pro(
-            ren_tex.texture(),
-            rrect(0, 0, ren_tex.texture.width, -ren_tex.texture.height),
-            rrect(0, 0, ren_tex.texture.width/2, ren_tex.texture.height/2),
-            rvec2(0,0),//rvec2(ren_tex.texture.width/2, ren_tex.texture.height/2),
-            0.,
-            Color::WHITE,
-        );
+        {
+            let mut d = d.begin_shader_mode(if self.blur {
+                &self.blur_shader
+            } else {
+                &self.def_shader
+            });
+            d.draw_texture_pro(
+                self.ren_tex.texture(),
+                rrect(
+                    0,
+                    0,
+                    self.ren_tex.texture.width,
+                    -self.ren_tex.texture.height,
+                ),
+                rrect(
+                    0,
+                    0,
+                    self.ren_tex.texture.width / 2,
+                    self.ren_tex.texture.height / 2,
+                ),
+                rvec2(0, 0), //rvec2(ren_tex.texture.width/2, ren_tex.texture.height/2),
+                0.,
+                Color::WHITE,
+            );
+        }
 
         // Draw UI
         {
@@ -666,8 +735,8 @@ impl<'a> Game<'a> {
             .translation(position)
             .can_sleep(false)
             .build();
-        let collider = ColliderBuilder::capsule_y(20.0, 20.0)
-            .position(Isometry::new(vector![0., 0.0], 0.0))
+        let collider = ColliderBuilder::capsule_y(25.0, 14.0)
+            .position(Isometry::new(vector![0., -3.0], 0.0))
             .active_events(ActiveEvents::INTERSECTION_EVENTS | ActiveEvents::CONTACT_EVENTS)
             .build();
 

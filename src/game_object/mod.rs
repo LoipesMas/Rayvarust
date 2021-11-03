@@ -46,6 +46,10 @@ impl GameObject {
     pub fn get_uuid(&self) -> u128 {
         self.uuid
     }
+
+    pub fn get_transform(&self) -> Transform2D {
+        self.transform
+    }
 }
 
 pub trait Drawable {
@@ -53,6 +57,7 @@ pub trait Drawable {
     fn get_scale(&self) -> f32;
     fn set_scale(&mut self, scale: f32);
     fn set_tint(&mut self, tint: Color);
+    fn get_transform(&self) -> Transform2D;
 }
 
 pub trait Spatial {
@@ -98,6 +103,10 @@ impl Drawable for GameObject {
         if let Some(s) = self.sprite.as_mut() {
             s.set_tint(tint);
         }
+    }
+
+    fn get_transform(&self) -> Transform2D {
+        self.transform
     }
 }
 

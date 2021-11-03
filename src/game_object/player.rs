@@ -78,6 +78,10 @@ impl Drawable for Player {
     fn set_tint(&mut self, tint: Color) {
         self.game_object.set_tint(tint);
     }
+
+    fn get_transform(&self) -> Transform2D {
+        self.game_object.get_transform()
+    }
 }
 
 impl Processing for Player {
@@ -138,7 +142,7 @@ impl Processing for Player {
         if zoom_minus {
             self.zoom *= 1.0 + delta * 4.0;
         }
-        self.zoom = self.zoom.min(0.8).max(0.25);
+        self.zoom = self.zoom.min(4.0).max(0.25);
     }
 }
 

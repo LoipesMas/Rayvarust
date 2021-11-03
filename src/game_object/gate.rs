@@ -1,4 +1,4 @@
-use super::{Drawable, GameObject, PhysicsObject, Spatial, Sprite};
+use super::{Drawable, GameObject, PhysicsObject, Spatial, Sprite, Transform2D};
 
 use crate::{impl_drawable, impl_spatial};
 

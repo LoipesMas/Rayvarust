@@ -1,5 +1,7 @@
 use raylib::prelude::*;
 
+use crate::SHIP_NAMES;
+
 mod button;
 use button::Button;
 
@@ -15,6 +17,10 @@ pub struct Menu<'a> {
     font: Font,
     random_levels: bool,
     fuel_mode: bool,
+    pub selected_ship: usize,
+    ship_prev: Button,
+    ship_next: Button,
+    ship_textures: Vec<WeakTexture2D>,
 }
 
 impl<'a> Menu<'a> {
@@ -25,6 +31,7 @@ impl<'a> Menu<'a> {
         window_height: i16,
         random_levels: bool,
         fuel_mode: bool,
+        selected_ship: usize,
     ) -> Self {
         rl.show_cursor();
         let center = Vector2::new((window_width / 2).into(), (window_height / 2).into());
@@ -54,6 +61,10 @@ impl<'a> Menu<'a> {
             center + Vector2::new(0., 50. * line),
         );
 
+        let ship_prev = Button::new("<".to_string(), rvec2(40., 40.), rvec2(1440., 720.));
+
+        let ship_next = Button::new(">".to_string(), rvec2(40., 40.), rvec2(1520., 720.));
+
         let font = rl
             .load_font_ex(
                 thread,
@@ -62,6 +73,18 @@ impl<'a> Menu<'a> {
                 FontLoadEx::Default(0),
             )
             .expect("Couldn't load font");
+
+        let mut ship_textures = vec![];
+        for ship_name in SHIP_NAMES {
+            let tex = rl
+                .load_texture(
+                    thread,
+                    &("resources/textures/ships/".to_owned() + ship_name + ".png"),
+                )
+                .unwrap();
+            let weak = unsafe { tex.make_weak() };
+            ship_textures.push(weak);
+        }
 
         Menu {
             rl,
@@ -75,6 +98,10 @@ impl<'a> Menu<'a> {
             font,
             random_levels,
             fuel_mode,
+            selected_ship,
+            ship_prev,
+            ship_next,
+            ship_textures,
         }
     }
 
@@ -127,6 +154,28 @@ impl<'a> Menu<'a> {
             Rectangle::new(300., 360., 200., 50.),
             Some(toggle_text),
             self.fuel_mode,
+        );
+
+        let ship_p = self.ship_prev.draw(&mut d);
+        if ship_p {
+            if self.selected_ship == 0 {
+                self.selected_ship = SHIP_NAMES.len();
+            }
+            self.selected_ship -= 1;
+        }
+        let ship_n = self.ship_next.draw(&mut d);
+        if ship_n {
+            self.selected_ship += 1;
+            if self.selected_ship >= SHIP_NAMES.len() {
+                self.selected_ship = 0;
+            }
+        }
+
+        d.draw_texture(
+            self.ship_textures[self.selected_ship].clone(),
+            1350,
+            440,
+            Color::WHITE,
         );
 
         // Select short level

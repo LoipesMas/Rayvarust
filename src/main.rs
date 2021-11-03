@@ -15,6 +15,8 @@ use rapier2d::prelude::*;
 
 use rand::prelude::*;
 
+const SHIP_NAMES: [&str; 5] = ["sb", "sg", "sp", "sr", "sy"];
+
 fn main() {
     let levels_lengths: Vec<u16> = vec![8, 16, 24];
     let levels_seeds: Vec<u64> = vec![4538, 1337, 22664];
@@ -38,6 +40,7 @@ fn main() {
     let mut random_levels = false;
     let mut fuel_mode = false;
     let mut seed = 0;
+    let mut selected_ship = 0;
 
     while !quit {
         if !restart {
@@ -48,8 +51,10 @@ fn main() {
                 window_height,
                 random_levels,
                 fuel_mode,
+                selected_ship,
             );
             action = menu.run();
+            selected_ship = menu.selected_ship;
             seed = 0;
         }
         restart = false;
@@ -75,6 +80,7 @@ fn main() {
                     window_height,
                     seed,
                     fuel_mode,
+                    selected_ship,
                 );
 
                 the_game.spawn_many_planets_with_gates(length);
