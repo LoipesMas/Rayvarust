@@ -15,15 +15,15 @@ use rapier2d::prelude::*;
 
 use rand::prelude::*;
 
-const SHIP_NAMES: [&str; 5] = ["sb", "sg", "sp", "sr", "sy"];
+const SHIP_NAMES: [&str; 5] = ["sr", "sb", "sg", "sp", "sy"];
 
 fn main() {
     let levels_lengths: Vec<u16> = vec![8, 16, 24];
     let levels_seeds: Vec<u64> = vec![4538, 1337, 22664];
     let levels_fuels: Vec<f32> = vec![333., 932., 1416.];
 
-    let window_width: i16 = 960 * 2;
-    let window_height: i16 = 540 * 2;
+    let window_width: i16 = 1920;
+    let window_height: i16 = 1080;
     let (mut rl, thread) = raylib::init()
         .size(window_width.into(), window_height.into())
         .title("Rayvarust")
