@@ -3,6 +3,8 @@ use raylib::prelude::*;
 
 use crate::math::Transform2D;
 
+use crate::DrawHandle;
+
 mod utils;
 
 mod sprite;
@@ -53,7 +55,7 @@ impl GameObject {
 }
 
 pub trait Drawable {
-    fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>);
+    fn draw(&self, rl: &mut DrawHandle!());
     fn get_scale(&self) -> f32;
     fn set_scale(&mut self, scale: f32);
     fn set_tint(&mut self, tint: Color);
@@ -80,7 +82,7 @@ pub trait PhysicsObject {
 }
 
 impl Drawable for GameObject {
-    fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>) {
+    fn draw(&self, rl: &mut DrawHandle!()) {
         if let Some(s) = &self.sprite {
             s.draw(rl, &self.transform);
         }

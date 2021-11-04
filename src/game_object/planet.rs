@@ -1,4 +1,5 @@
 use super::{Drawable, PhysicsObject, Spatial, Sprite};
+use crate::DrawHandle;
 
 use raylib::prelude::*;
 
@@ -71,7 +72,7 @@ impl Spatial for Planet {
 }
 
 impl Drawable for Planet {
-    fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>) {
+    fn draw(&self, rl: &mut DrawHandle!()) {
         self.sprite.draw(rl, &self.transform)
     }
 

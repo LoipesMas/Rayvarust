@@ -1,6 +1,6 @@
 use super::{Drawable, GameObject, PhysicsObject, Processing, Spatial, Sprite};
 
-use crate::impl_spatial;
+use crate::{impl_spatial, DrawHandle};
 
 use raylib::prelude::*;
 
@@ -56,7 +56,7 @@ impl Player {
 impl_spatial!(Player);
 
 impl Drawable for Player {
-    fn draw(&self, rl: &mut RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>>) {
+    fn draw(&self, rl: &mut DrawHandle!()) {
         if self.move_vec.y < 0. {
             let mut exhaust_transform = self.game_object.transform;
             let rot = Rotation::new(exhaust_transform.rotation);

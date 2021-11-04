@@ -1,6 +1,6 @@
 use super::{Drawable, GameObject, PhysicsObject, Spatial, Sprite, Transform2D};
 
-use crate::{impl_drawable, impl_spatial};
+use crate::{impl_drawable, impl_spatial, DrawHandle};
 
 use raylib::prelude::*;
 

@@ -17,6 +17,11 @@ use std::f32::consts::PI;
 
 use std::collections::HashMap;
 
+#[macro_export]
+macro_rules! DrawHandle {
+    () =>  { RaylibShaderMode<RaylibMode2D<RaylibTextureMode<RaylibDrawHandle>>> }
+}
+
 /// Color of debug collider
 const COLL_COLOR: Color = Color {
     r: 70,
