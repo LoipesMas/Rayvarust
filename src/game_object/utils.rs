@@ -26,10 +26,7 @@ macro_rules! impl_spatial {
 macro_rules! impl_drawable {
     ($x:tt) => {
         impl Drawable for $x {
-            fn draw(
-                &self,
-                rl: &mut DrawHandle!(),
-            ) {
+            fn draw(&self, rl: &mut DrawHandle!()) {
                 self.game_object.draw(rl);
             }
 
