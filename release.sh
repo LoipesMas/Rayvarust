@@ -4,6 +4,7 @@ echo "Compiled!" &&
 echo "Zipping..." &&
 zip rayvarust.linux.zip resources/ -r &&
 cd target/release/ &&
+strip rayvarust
 zip ../../rayvarust.linux.zip rayvarust &&
 echo "Zipped!" &&
 echo "Compiling for windows..." &&
