@@ -77,5 +77,8 @@ void main()
 	f = 1.0/(1.0+pow(2.2718, -f));
     
     vec3 color = mix(colorA, colorB, f).rgb;
+	if (abs(r-rad_thresh) < 0.005) {
+		color = vec3(0.0);
+	}
 	finalColor = vec4(color, a)*colDiffuse;
 }
