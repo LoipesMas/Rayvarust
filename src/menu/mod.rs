@@ -10,6 +10,7 @@ pub struct Menu<'a> {
     thread: &'a RaylibThread,
     window_size: (i16, i16),
     center: Vector2,
+    bg_tex: Texture2D,
     short_button: Button,
     medium_button: Button,
     long_button: Button,
@@ -22,6 +23,8 @@ pub struct Menu<'a> {
     ship_next: Button,
     ship_textures: Vec<WeakTexture2D>,
 }
+
+const SHIP_SELECT_POS: Vector2 = Vector2 { x: 200.0, y: 440.0 };
 
 impl<'a> Menu<'a> {
     pub fn new(
@@ -61,9 +64,17 @@ impl<'a> Menu<'a> {
             center + Vector2::new(0., 50. * line),
         );
 
-        let ship_prev = Button::new("<".to_string(), rvec2(40., 40.), rvec2(1440., 720.));
+        let ship_prev = Button::new(
+            "<".to_string(),
+            rvec2(40., 40.),
+            SHIP_SELECT_POS + rvec2(90.0, 280.),
+        );
 
-        let ship_next = Button::new(">".to_string(), rvec2(40., 40.), rvec2(1520., 720.));
+        let ship_next = Button::new(
+            ">".to_string(),
+            rvec2(40., 40.),
+            SHIP_SELECT_POS + rvec2(170., 280.),
+        );
 
         let font = rl
             .load_font_ex(
@@ -86,11 +97,16 @@ impl<'a> Menu<'a> {
             ship_textures.push(weak);
         }
 
+        let bg_tex = rl
+            .load_texture(thread, "resources/textures/title_screen.png")
+            .unwrap();
+
         Menu {
             rl,
             thread,
             window_size: (window_width, window_height),
             center,
+            bg_tex,
             short_button,
             medium_button,
             long_button,
@@ -114,13 +130,14 @@ impl<'a> Menu<'a> {
                 (self.window_size.0 / 2).into(),
                 (self.window_size.1 / 2).into(),
             );
-            self.short_button.position = self.center;
         }
 
         let esc_pressed = self.rl.is_key_pressed(KeyboardKey::KEY_ESCAPE);
 
         let mut d = self.rl.begin_drawing(self.thread);
-        d.clear_background(Color::GOLD);
+        d.clear_background(Color::DARKPURPLE);
+        d.draw_texture(&self.bg_tex, 0, 0, Color::WHITE);
+
         d.gui_set_font(&self.font);
         d.gui_set_style(
             GuiControl::DEFAULT,
@@ -142,7 +159,7 @@ impl<'a> Menu<'a> {
             toggle_text = rstr!("Random levels: OFF");
         }
         self.random_levels = d.gui_toggle(
-            Rectangle::new(300., 300., 200., 50.),
+            Rectangle::new(1200., 700., 200., 50.),
             Some(toggle_text),
             self.random_levels,
         );
@@ -151,11 +168,12 @@ impl<'a> Menu<'a> {
             toggle_text = rstr!("Fuel mode: OFF");
         }
         self.fuel_mode = d.gui_toggle(
-            Rectangle::new(300., 360., 200., 50.),
+            Rectangle::new(1200., 760., 200., 50.),
             Some(toggle_text),
             self.fuel_mode,
         );
 
+        // Buttons for selecting ship
         let ship_p = self.ship_prev.draw(&mut d);
         if ship_p {
             if self.selected_ship == 0 {
@@ -171,10 +189,10 @@ impl<'a> Menu<'a> {
             }
         }
 
-        d.draw_texture(
+        // Draw selected ship
+        d.draw_texture_v(
             self.ship_textures[self.selected_ship].clone(),
-            1350,
-            440,
+            SHIP_SELECT_POS,
             Color::WHITE,
         );
 
