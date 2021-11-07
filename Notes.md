@@ -11,3 +11,4 @@
 - Controls
 - Slider for level length
 - You died & You win
+- Sound…
