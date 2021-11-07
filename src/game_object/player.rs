@@ -38,7 +38,7 @@ impl Player {
             ang_speed: 1.45,
             move_vec: NVector2::zeros(),
             rot: 0.0,
-            zoom: 0.3,
+            zoom: 0.6,
             fuel: 10.,
             fuel_mode: false,
             level_completed: false,
