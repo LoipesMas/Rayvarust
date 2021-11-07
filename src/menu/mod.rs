@@ -1,4 +1,5 @@
 use raylib::prelude::*;
+use std::ffi::CString;
 
 use crate::SHIP_NAMES;
 
@@ -11,10 +12,9 @@ pub struct Menu<'a> {
     window_size: (i16, i16),
     center: Vector2,
     bg_tex: Texture2D,
-    short_button: Button,
-    medium_button: Button,
-    long_button: Button,
+    start_button: Button,
     quit_button: Button,
+    selected_length: f32,
     font: Font,
     random_levels: bool,
     fuel_mode: bool,
@@ -40,20 +40,8 @@ impl<'a> Menu<'a> {
         let center = Vector2::new((window_width / 2).into(), (window_height / 2).into());
 
         let mut line = 0.;
-        let short_button = Button::new(
-            "Short".to_string(),
-            Vector2::new(120., 40.),
-            center + Vector2::new(0., 50. * line),
-        );
-        line += 1.;
-        let medium_button = Button::new(
-            "Medium".to_string(),
-            Vector2::new(120., 40.),
-            center + Vector2::new(0., 50. * line),
-        );
-        line += 1.;
-        let long_button = Button::new(
-            "Long".to_string(),
+        let start_button = Button::new(
+            "Start".to_string(),
             Vector2::new(120., 40.),
             center + Vector2::new(0., 50. * line),
         );
@@ -107,9 +95,8 @@ impl<'a> Menu<'a> {
             window_size: (window_width, window_height),
             center,
             bg_tex,
-            short_button,
-            medium_button,
-            long_button,
+            selected_length: 0.0,
+            start_button,
             quit_button,
             font,
             random_levels,
@@ -189,6 +176,17 @@ impl<'a> Menu<'a> {
             }
         }
 
+        self.selected_length = d
+            .gui_slider(
+                rrect(self.start_button.position.x - 100.0, self.start_button.position.y - 60., 200., 30.),
+                Some(&CString::new(self.selected_length.to_string()).unwrap()),
+                None,
+                self.selected_length,
+                6.,
+                32.,
+            )
+            .round();
+
         // Draw selected ship
         d.draw_texture_v(
             self.ship_textures[self.selected_ship].clone(),
@@ -197,19 +195,9 @@ impl<'a> Menu<'a> {
         );
 
         // Select short level
-        let short = self.short_button.draw(&mut d);
-        if short {
-            return Some(MenuAction::Start(0, self.random_levels, self.fuel_mode));
-        }
-        // Select medium level
-        let medium = self.medium_button.draw(&mut d);
-        if medium {
-            return Some(MenuAction::Start(1, self.random_levels, self.fuel_mode));
-        }
-        // Select long level
-        let long = self.long_button.draw(&mut d);
-        if long {
-            return Some(MenuAction::Start(2, self.random_levels, self.fuel_mode));
+        let start = self.start_button.draw(&mut d);
+        if start {
+            return Some(MenuAction::Start(self.selected_length as u16, self.random_levels, self.fuel_mode));
         }
 
         let quit_b_pressed = self.quit_button.draw(&mut d);
@@ -240,6 +228,6 @@ impl<'a> Menu<'a> {
 
 #[derive(PartialEq, Eq)]
 pub enum MenuAction {
-    Start(usize, bool, bool),
+    Start(u16, bool, bool),
     Quit,
 }

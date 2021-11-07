@@ -17,11 +17,9 @@ use rand::prelude::*;
 
 const SHIP_NAMES: [&str; 5] = ["sr", "sb", "sg", "sp", "sy"];
 
-fn main() {
-    let levels_lengths: Vec<u16> = vec![8, 16, 24];
-    let levels_seeds: Vec<u64> = vec![4538, 1337, 22664];
-    let levels_fuels: Vec<f32> = vec![333., 932., 1416.];
+const FUEL_MULTIPLIER : f32 = 42.0;
 
+fn main() {
     let window_width: i16 = 1920;
     let window_height: i16 = 1080;
     let (mut rl, thread) = raylib::init()
@@ -61,17 +59,16 @@ fn main() {
         restart = false;
 
         match action {
-            MenuAction::Start(level, random, fuel) => {
+            MenuAction::Start(length, random, fuel) => {
                 random_levels = random;
                 fuel_mode = fuel;
-                let length = levels_lengths[level];
                 let window_width = rl.get_screen_width() as i16;
                 let window_height = rl.get_screen_height() as i16;
                 if seed == 0 {
                     seed = if random {
                         thread_rng().gen::<u16>() as u64
                     } else {
-                        levels_seeds[level]
+                        length as u64
                     };
                 }
                 let mut the_game = Game::new(
@@ -86,7 +83,7 @@ fn main() {
 
                 the_game.spawn_many_planets_with_gates(length);
 
-                the_game.spawn_player(vector![0., 0.], levels_fuels[level]);
+                the_game.spawn_player(vector![0., 0.], FUEL_MULTIPLIER * length as f32);
 
                 let action = the_game.run();
                 match action {

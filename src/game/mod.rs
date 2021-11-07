@@ -920,11 +920,11 @@ impl<'a> Game<'a> {
         assert!(gate_count < 6, "Gate count must be less than 6");
 
         let hue = self.rng.gen::<f32>() * 250.;
-        let sat = self.rng.gen::<f32>() * 0.5 + 0.5;
+        let sat = self.rng.gen::<f32>() * 0.3 + 0.5;
         let color_a = Color::color_from_hsv(hue, sat, 0.9);
-        let hue = self.rng.gen::<f32>() * 250.;
-        let sat = self.rng.gen::<f32>() * 0.5;
-        let color_b = Color::color_from_hsv(hue, sat, 0.1);
+        let hue = hue + 3.0;
+        let sat = self.rng.gen::<f32>() * 0.3 + 0.5;
+        let color_b = Color::color_from_hsv(hue, sat, 0.8);
 
         self.spawn_planet(position, radius, color_a, color_b);
 
