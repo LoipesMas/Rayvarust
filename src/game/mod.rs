@@ -63,6 +63,7 @@ pub struct Game<'a> {
     font: Font,
     asteroid_tex: WeakTexture2D,
     gate_tex: WeakTexture2D,
+    gate_off_tex: WeakTexture2D,
     gate_count: u32,
     next_gate: u32,
     arrow: GameObject,
@@ -94,7 +95,7 @@ impl<'a> Game<'a> {
                 100,
                 FontLoadEx::Default(0),
             )
-            .expect("Couldn't load font");
+            .unwrap();
 
         let ship_name = SHIP_NAMES[selected_ship];
         let player_tex = unsafe {
@@ -102,41 +103,47 @@ impl<'a> Game<'a> {
                 thread,
                 &("resources/textures/ships/".to_owned() + ship_name + ".png"),
             )
-            .expect("Couldn't load spaceship image")
+            .unwrap()
             .make_weak()
         };
 
         let exhaust_tex = unsafe {
             rl.load_texture(thread, "resources/textures/exhaust.png")
-                .expect("Couldn't load exhaust.png")
+                .unwrap()
                 .make_weak()
         };
 
         let asteroid_tex = unsafe {
             rl.load_texture(thread, "resources/textures/asteroid.png")
-                .expect("Couldn't load asteroid.png")
+                .unwrap()
                 .make_weak()
         };
 
         let gate_tex = unsafe {
             rl.load_texture(thread, "resources/textures/gate.png")
-                .expect("Couldn't load gate.png")
+                .unwrap()
+                .make_weak()
+        };
+
+        let gate_off_tex = unsafe {
+            rl.load_texture(thread, "resources/textures/gate_off.png")
+                .unwrap()
                 .make_weak()
         };
 
         let arrow_tex = unsafe {
             rl.load_texture(thread, "resources/textures/arrow.png")
-                .expect("Couldn't load arrow.png")
+                .unwrap()
                 .make_weak()
         };
 
         let planet_shader = rl
             .load_shader(thread, None, Some("resources/shaders/planet.fs"))
-            .expect("Couldn't load shader");
+            .unwrap();
 
         let mut blur_shader = rl
             .load_shader(thread, None, Some("resources/shaders/blur.fs"))
-            .expect("Couldn't load shader");
+            .unwrap();
 
         // Update blur shader uniforms
         {
@@ -208,6 +215,7 @@ impl<'a> Game<'a> {
             font,
             asteroid_tex,
             gate_tex,
+            gate_off_tex,
             gate_count: 0,
             next_gate: 0,
             arrow,
@@ -268,6 +276,8 @@ impl<'a> Game<'a> {
             self.rl
                 .unload_texture(self.thread, self.asteroid_tex.clone());
             self.rl.unload_texture(self.thread, self.gate_tex.clone());
+            self.rl
+                .unload_texture(self.thread, self.gate_off_tex.clone());
             self.rl.unload_texture(self.thread, self.arrow_tex.clone());
         }
     }
@@ -529,13 +539,12 @@ impl<'a> Game<'a> {
                         continue;
                     }
 
-                    // Color based on whether the gate is past/current/future
-                    let color = match gate.gate_num.cmp(&self.next_gate) {
-                        Ordering::Less => Color::DARKGRAY,
-                        Ordering::Equal => HIGHLIGHT_COLOR,
-                        Ordering::Greater => Color::LIGHTGRAY,
+                    // Gates already passed are off
+                    match gate.gate_num.cmp(&self.next_gate) {
+                        Ordering::Less => gate.set_off(true),
+                        Ordering::Equal => gate.set_off(false),
+                        Ordering::Greater => gate.set_off(false),
                     };
-                    gate.set_tint(color);
 
                     gate.draw(&mut mode);
                 }
@@ -864,7 +873,7 @@ impl<'a> Game<'a> {
 
     /// Spawns a gate at given position
     pub fn spawn_gate(&mut self, position: NVector2, rotation: f32) {
-        let mut gate = Gate::new(self.gate_tex.clone());
+        let mut gate = Gate::new(self.gate_tex.clone(), self.gate_off_tex.clone());
         gate.gate_num = self.gate_count;
 
         let width = 15.0;

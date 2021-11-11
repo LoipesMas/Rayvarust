@@ -179,7 +179,12 @@ impl<'a> Menu<'a> {
 
         self.selected_length = d
             .gui_slider(
-                rrect(self.start_button.position.x - 100.0, self.start_button.position.y - 60., 200., 30.),
+                rrect(
+                    self.start_button.position.x - 100.0,
+                    self.start_button.position.y - 60.,
+                    200.,
+                    30.,
+                ),
                 Some(&CString::new(self.selected_length.to_string()).unwrap()),
                 None,
                 self.selected_length,
@@ -198,7 +203,11 @@ impl<'a> Menu<'a> {
         // Select short level
         let start = self.start_button.draw(&mut d);
         if start {
-            return Some(MenuAction::Start(self.selected_length as u16, self.random_levels, self.fuel_mode));
+            return Some(MenuAction::Start(
+                self.selected_length as u16,
+                self.random_levels,
+                self.fuel_mode,
+            ));
         }
 
         let quit_b_pressed = self.quit_button.draw(&mut d);

@@ -17,7 +17,7 @@ use rand::prelude::*;
 
 const SHIP_NAMES: [&str; 5] = ["sr", "sb", "sg", "sp", "sy"];
 
-const FUEL_MULTIPLIER : f32 = 42.0;
+const FUEL_MULTIPLIER: f32 = 42.0;
 
 fn main() {
     let window_width: i16 = 1920;

@@ -9,23 +9,45 @@ use rapier2d::prelude::*;
 pub struct Gate {
     pub game_object: GameObject,
     pub gate_num: u32,
+    tex: WeakTexture2D,
+    off_tex: WeakTexture2D,
+    is_off: bool,
 }
 
 pub const HIGHLIGHT_COLOR: Color = Color::new(255, 255, 255, 255);
 
 impl Gate {
-    pub fn new(texture: WeakTexture2D) -> Self {
+    pub fn new(tex: WeakTexture2D, off_tex: WeakTexture2D) -> Self {
         let mut game_object = GameObject::new();
-        game_object.sprite = Some(Sprite::new(texture, true, 0.7));
+        game_object.sprite = Some(Sprite::new(tex.clone(), true, 0.7));
 
         Self {
             game_object,
             gate_num: 0,
+            tex,
+            off_tex,
+            is_off: false,
         }
     }
 
     pub fn get_uuid(&self) -> u128 {
         self.game_object.get_uuid()
+    }
+
+    pub fn set_off(&mut self, value: bool) {
+        println!("{}", value);
+        if value == self.is_off {
+            return;
+        }
+        self.is_off = value;
+
+        let tex = if self.is_off {
+            self.off_tex.clone()
+        } else {
+            self.tex.clone()
+        };
+
+        self.game_object.sprite.as_mut().unwrap().set_texture(tex);
     }
 }
 
