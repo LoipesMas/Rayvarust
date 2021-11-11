@@ -507,6 +507,17 @@ impl<'a> Game<'a> {
 
                 let mut mode = mode1.begin_shader_mode(&self.def_shader);
 
+                // Rendering objects
+                for object in self.draw_objects.values() {
+                    let object = object.borrow();
+                    let dist = (object.get_transform().position - self.camera.target).length_sqr();
+                    if dist > RENDER_DISTANCE {
+                        continue;
+                    }
+
+                    object.draw(&mut mode);
+                }
+
                 // Render gates first
                 for gate in self.gate_objects.iter_mut() {
                     use std::cmp::Ordering;
@@ -520,24 +531,13 @@ impl<'a> Game<'a> {
 
                     // Color based on whether the gate is past/current/future
                     let color = match gate.gate_num.cmp(&self.next_gate) {
-                        Ordering::Less => Color::GRAY,
+                        Ordering::Less => Color::DARKGRAY,
                         Ordering::Equal => HIGHLIGHT_COLOR,
-                        Ordering::Greater => Color::WHITE,
+                        Ordering::Greater => Color::LIGHTGRAY,
                     };
                     gate.set_tint(color);
 
                     gate.draw(&mut mode);
-                }
-
-                // Rendering objects
-                for object in self.draw_objects.values() {
-                    let object = object.borrow();
-                    let dist = (object.get_transform().position - self.camera.target).length_sqr();
-                    if dist > RENDER_DISTANCE {
-                        continue;
-                    }
-
-                    object.draw(&mut mode);
                 }
 
                 // Draw arrow to next gate

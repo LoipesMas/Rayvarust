@@ -11,7 +11,7 @@ pub struct Gate {
     pub gate_num: u32,
 }
 
-pub const HIGHLIGHT_COLOR: Color = Color::new(250, 200, 200, 255);
+pub const HIGHLIGHT_COLOR: Color = Color::new(255, 255, 255, 255);
 
 impl Gate {
     pub fn new(texture: WeakTexture2D) -> Self {
