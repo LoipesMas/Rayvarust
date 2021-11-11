@@ -34,7 +34,8 @@ fn main() {
 
     let mut restart = false;
     let mut quit = false;
-    let mut action = MenuAction::Start(0, true, false);
+    let mut selected_length = 6;
+    let mut action = MenuAction::Start(selected_length, true, false);
     let mut random_levels = false;
     let mut fuel_mode = false;
     let mut seed = 0;
@@ -50,6 +51,7 @@ fn main() {
                 random_levels,
                 fuel_mode,
                 selected_ship,
+                selected_length.into(),
             );
             action = menu.run();
             menu.unload();
@@ -60,6 +62,7 @@ fn main() {
 
         match action {
             MenuAction::Start(length, random, fuel) => {
+                selected_length = length;
                 random_levels = random;
                 fuel_mode = fuel;
                 let window_width = rl.get_screen_width() as i16;

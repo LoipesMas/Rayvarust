@@ -35,6 +35,7 @@ impl<'a> Menu<'a> {
         random_levels: bool,
         fuel_mode: bool,
         selected_ship: usize,
+        selected_length: f32,
     ) -> Self {
         rl.show_cursor();
         let center = Vector2::new((window_width / 2).into(), (window_height / 2).into());
@@ -95,7 +96,7 @@ impl<'a> Menu<'a> {
             window_size: (window_width, window_height),
             center,
             bg_tex,
-            selected_length: 0.0,
+            selected_length,
             start_button,
             quit_button,
             font,
