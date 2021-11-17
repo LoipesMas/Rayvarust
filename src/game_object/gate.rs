@@ -11,22 +11,24 @@ pub struct Gate {
     pub gate_num: u32,
     tex: WeakTexture2D,
     off_tex: WeakTexture2D,
+    darker_tex: WeakTexture2D,
     is_off: bool,
+    highlight: bool,
 }
 
-pub const HIGHLIGHT_COLOR: Color = Color::new(255, 255, 255, 255);
-
 impl Gate {
-    pub fn new(tex: WeakTexture2D, off_tex: WeakTexture2D) -> Self {
+    pub fn new(tex: WeakTexture2D, off_tex: WeakTexture2D, darker_tex: WeakTexture2D) -> Self {
         let mut game_object = GameObject::new();
-        game_object.sprite = Some(Sprite::new(tex.clone(), true, 0.7));
+        game_object.sprite = Some(Sprite::new(darker_tex.clone(), true, 0.7));
 
         Self {
             game_object,
             gate_num: 0,
             tex,
             off_tex,
+            darker_tex,
             is_off: false,
+            highlight: false,
         }
     }
 
@@ -34,17 +36,19 @@ impl Gate {
         self.game_object.get_uuid()
     }
 
-    pub fn set_off(&mut self, value: bool) {
-        println!("{}", value);
-        if value == self.is_off {
+    pub fn set_state(&mut self, is_off: bool, highlight: bool) {
+        if is_off == self.is_off && highlight == self.highlight {
             return;
         }
-        self.is_off = value;
+        self.is_off = is_off;
+        self.highlight = highlight;
 
         let tex = if self.is_off {
             self.off_tex.clone()
-        } else {
+        } else if self.highlight {
             self.tex.clone()
+        } else {
+            self.darker_tex.clone()
         };
 
         self.game_object.sprite.as_mut().unwrap().set_texture(tex);

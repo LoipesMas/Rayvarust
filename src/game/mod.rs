@@ -64,6 +64,7 @@ pub struct Game<'a> {
     asteroid_tex: WeakTexture2D,
     gate_tex: WeakTexture2D,
     gate_off_tex: WeakTexture2D,
+    gate_darker_tex: WeakTexture2D,
     gate_count: u32,
     next_gate: u32,
     arrow: GameObject,
@@ -127,6 +128,12 @@ impl<'a> Game<'a> {
 
         let gate_off_tex = unsafe {
             rl.load_texture(thread, "resources/textures/gate_off.png")
+                .unwrap()
+                .make_weak()
+        };
+
+        let gate_darker_tex = unsafe {
+            rl.load_texture(thread, "resources/textures/gate_darker.png")
                 .unwrap()
                 .make_weak()
         };
@@ -216,6 +223,7 @@ impl<'a> Game<'a> {
             asteroid_tex,
             gate_tex,
             gate_off_tex,
+            gate_darker_tex,
             gate_count: 0,
             next_gate: 0,
             arrow,
@@ -278,6 +286,8 @@ impl<'a> Game<'a> {
             self.rl.unload_texture(self.thread, self.gate_tex.clone());
             self.rl
                 .unload_texture(self.thread, self.gate_off_tex.clone());
+            self.rl
+                .unload_texture(self.thread, self.gate_darker_tex.clone());
             self.rl.unload_texture(self.thread, self.arrow_tex.clone());
         }
     }
@@ -541,9 +551,9 @@ impl<'a> Game<'a> {
 
                     // Gates already passed are off
                     match gate.gate_num.cmp(&self.next_gate) {
-                        Ordering::Less => gate.set_off(true),
-                        Ordering::Equal => gate.set_off(false),
-                        Ordering::Greater => gate.set_off(false),
+                        Ordering::Less => gate.set_state(true, false),
+                        Ordering::Equal => gate.set_state(false, true),
+                        Ordering::Greater => gate.set_state(false, false),
                     };
 
                     gate.draw(&mut mode);
@@ -873,7 +883,7 @@ impl<'a> Game<'a> {
 
     /// Spawns a gate at given position
     pub fn spawn_gate(&mut self, position: NVector2, rotation: f32) {
-        let mut gate = Gate::new(self.gate_tex.clone(), self.gate_off_tex.clone());
+        let mut gate = Gate::new(self.gate_tex.clone(), self.gate_off_tex.clone(), self.gate_darker_tex.clone());
         gate.gate_num = self.gate_count;
 
         let width = 15.0;

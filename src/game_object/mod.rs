@@ -17,7 +17,7 @@ mod planet;
 pub use planet::Planet;
 
 mod gate;
-pub use gate::{Gate, HIGHLIGHT_COLOR};
+pub use gate::Gate;
 
 use rapier2d::prelude::*;
 
