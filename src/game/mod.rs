@@ -502,7 +502,6 @@ impl<'a> Game<'a> {
         // Drawing to texture
         {
             let mut d = d.begin_texture_mode(self.thread, &mut self.ren_tex);
-            //let mut d = self.rl.begin_drawing(self.thread);
             d.clear_background(self.bg_color);
 
             // Camera mode
@@ -538,7 +537,7 @@ impl<'a> Game<'a> {
                     object.draw(&mut mode);
                 }
 
-                // Render gates first
+                // Render gates last
                 for gate in self.gate_objects.iter_mut() {
                     use std::cmp::Ordering;
 
@@ -609,6 +608,7 @@ impl<'a> Game<'a> {
             }
         }
 
+        // Draw rendered texture
         {
             let mut d = d.begin_shader_mode(if self.blur {
                 &self.blur_shader
@@ -718,18 +718,25 @@ impl<'a> Game<'a> {
 
             // Restart prompt
             if self.completed {
-                let restart_text = "Press R to restart";
-                line += 1.0;
+                let restart_text = if self
+                    .player_rc
+                    .as_deref()
+                    .map(|p| p.borrow().failed)
+                    .unwrap_or(true)
+                {
+                    "     Level failed\nPress R to restart"
+                } else {
+                    "      Level won!\nPress R to restart"
+                };
+                let mut text_position = self.camera.offset / 2.0; // center
+                text_position += rvec2(-150.0, -130.0); // offset from center
                 d.draw_text_ex(
                     &self.font,
                     restart_text,
-                    Vector2 {
-                        x: 0.0,
-                        y: 50.0 * line,
-                    },
+                    text_position,
                     50.0,
                     0.0,
-                    Color::GREEN,
+                    Color::GOLD,
                 );
             }
         }
@@ -883,7 +890,11 @@ impl<'a> Game<'a> {
 
     /// Spawns a gate at given position
     pub fn spawn_gate(&mut self, position: NVector2, rotation: f32) {
-        let mut gate = Gate::new(self.gate_tex.clone(), self.gate_off_tex.clone(), self.gate_darker_tex.clone());
+        let mut gate = Gate::new(
+            self.gate_tex.clone(),
+            self.gate_off_tex.clone(),
+            self.gate_darker_tex.clone(),
+        );
         gate.gate_num = self.gate_count;
 
         let width = 15.0;
