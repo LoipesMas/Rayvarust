@@ -511,7 +511,7 @@ impl<'a> Game<'a> {
                 let color_a_loc = self.planet_shader.get_shader_location("colorA");
                 let color_b_loc = self.planet_shader.get_shader_location("colorB");
                 for planet in self.planet_objects.values_mut() {
-                    let planet = planet.borrow_mut();
+                    let planet = planet.borrow();
                     let dist = (planet.get_position() - self.camera.target).length_sqr();
                     if dist > RENDER_DISTANCE {
                         continue;

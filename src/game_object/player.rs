@@ -133,8 +133,8 @@ impl Processing for Player {
         }
 
         // Zoom
-        let zoom_plus = rl.is_key_down(KeyboardKey::KEY_LEFT_BRACKET);
-        let zoom_minus = rl.is_key_down(KeyboardKey::KEY_RIGHT_BRACKET);
+        let zoom_plus = rl.is_key_down(KeyboardKey::KEY_K);
+        let zoom_minus = rl.is_key_down(KeyboardKey::KEY_L);
 
         if zoom_plus {
             self.zoom *= 1.0 / (1.0 + delta * 4.0);

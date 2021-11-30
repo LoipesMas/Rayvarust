@@ -22,9 +22,25 @@ pub struct Menu<'a> {
     ship_prev: Button,
     ship_next: Button,
     ship_textures: Vec<WeakTexture2D>,
+    popup_texture: Texture2D,
+    popup_open: bool,
+    popup_button: Button,
 }
 
 const SHIP_SELECT_POS: Vector2 = Vector2 { x: 200.0, y: 440.0 };
+const POPUP_POS: Vector2 = Vector2 { x: 500.0, y: 300.0 };
+
+const POPUP_TEXT: &str = "
+Controls:
+  WSAD - acceleration
+  IO - rotation
+  KL - zoom in/out
+Rules:
+  Go through a gate = +30 points
+  Touch anything = -10 points
+  Have less than 0 points = fail
+  Go through all gates = completion
+";
 
 impl<'a> Menu<'a> {
     pub fn new(
@@ -38,7 +54,7 @@ impl<'a> Menu<'a> {
         selected_length: f32,
     ) -> Self {
         rl.show_cursor();
-        let center = Vector2::new((window_width / 2).into(), (window_height / 2).into());
+        let center = rvec2((window_width / 2) as f32, (window_height / 2) as f32);
 
         let mut line = 0.;
         let start_button = Button::new(
@@ -63,6 +79,12 @@ impl<'a> Menu<'a> {
             ">".to_string(),
             rvec2(40., 40.),
             SHIP_SELECT_POS + rvec2(170., 280.),
+        );
+
+        let popup_button = Button::new(
+            "ABOUT".to_string(),
+            rvec2(130., 60.),
+            POPUP_POS + rvec2(900., 590.),
         );
 
         let font = rl
@@ -90,6 +112,10 @@ impl<'a> Menu<'a> {
             .load_texture(thread, "resources/textures/title_screen.png")
             .unwrap();
 
+        let popup_texture = rl
+            .load_texture(thread, "resources/textures/popup.png")
+            .unwrap();
+
         Menu {
             rl,
             thread,
@@ -106,6 +132,9 @@ impl<'a> Menu<'a> {
             ship_prev,
             ship_next,
             ship_textures,
+            popup_texture,
+            popup_open: false,
+            popup_button,
         }
     }
 
@@ -142,25 +171,6 @@ impl<'a> Menu<'a> {
             22,
         );
 
-        let mut toggle_text = rstr!("Random levels: ON");
-        if !self.random_levels {
-            toggle_text = rstr!("Random levels: OFF");
-        }
-        self.random_levels = d.gui_toggle(
-            Rectangle::new(1200., 700., 200., 50.),
-            Some(toggle_text),
-            self.random_levels,
-        );
-        let mut toggle_text = rstr!("Fuel mode: ON");
-        if !self.fuel_mode {
-            toggle_text = rstr!("Fuel mode: OFF");
-        }
-        self.fuel_mode = d.gui_toggle(
-            Rectangle::new(1200., 760., 200., 50.),
-            Some(toggle_text),
-            self.fuel_mode,
-        );
-
         // Buttons for selecting ship
         let ship_p = self.ship_prev.draw(&mut d);
         if ship_p {
@@ -177,6 +187,41 @@ impl<'a> Menu<'a> {
             }
         }
 
+        // Draw selected ship
+        d.draw_texture_v(
+            self.ship_textures[self.selected_ship].clone(),
+            SHIP_SELECT_POS,
+            Color::WHITE,
+        );
+
+        // Disable guis under popup
+        if self.popup_open {
+            d.gui_disable();
+        }
+
+        // Random levels toggle
+        let mut toggle_text = rstr!("Random levels: ON");
+        if !self.random_levels {
+            toggle_text = rstr!("Random levels: OFF");
+        }
+        self.random_levels = d.gui_toggle(
+            Rectangle::new(1200., 700., 200., 50.),
+            Some(toggle_text),
+            self.random_levels,
+        );
+
+        // Fuel mode toggle
+        let mut toggle_text = rstr!("Fuel mode: ON");
+        if !self.fuel_mode {
+            toggle_text = rstr!("Fuel mode: OFF");
+        }
+        self.fuel_mode = d.gui_toggle(
+            Rectangle::new(1200., 760., 200., 50.),
+            Some(toggle_text),
+            self.fuel_mode,
+        );
+
+        // Level length slider
         self.selected_length = d
             .gui_slider(
                 rrect(
@@ -193,14 +238,7 @@ impl<'a> Menu<'a> {
             )
             .round();
 
-        // Draw selected ship
-        d.draw_texture_v(
-            self.ship_textures[self.selected_ship].clone(),
-            SHIP_SELECT_POS,
-            Color::WHITE,
-        );
-
-        // Select short level
+        // Start level
         let start = self.start_button.draw(&mut d);
         if start {
             return Some(MenuAction::Start(
@@ -210,10 +248,42 @@ impl<'a> Menu<'a> {
             ));
         }
 
+        // Quit game
         let quit_b_pressed = self.quit_button.draw(&mut d);
         if quit_b_pressed || esc_pressed {
             return Some(MenuAction::Quit);
         }
+
+        d.gui_enable();
+
+        // Toggle popup
+        let popup_button_pressed = self.popup_button.draw(&mut d);
+        self.popup_open ^= popup_button_pressed;
+
+        if self.popup_open {
+            // Draw popup
+            d.draw_texture_v(&self.popup_texture, POPUP_POS, Color::WHITE);
+
+            // Draw popup text
+            d.draw_text_ex(
+                &self.font,
+                POPUP_TEXT,
+                POPUP_POS + rvec2(45., -10.),
+                35.0,
+                0.0,
+                Color::RAYWHITE,
+            );
+
+            d.draw_text_ex(
+                &self.font,
+                "(Both hands on keyboard recommended)",
+                POPUP_POS + rvec2(345., 40.),
+                35.0,
+                0.0,
+                Color::RAYWHITE,
+            );
+        }
+
         None
     }
 
