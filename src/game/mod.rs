@@ -176,8 +176,8 @@ impl<'a> Game<'a> {
         let asteroid_colliders: HashMap<ColliderHandle, u128> = HashMap::new();
 
         let camera = Camera2D {
-            offset: Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0) * 2.0,
-            target: Vector2::new(0., 0.),
+            offset: rvec2(window_width as f32 / 2.0, window_height as f32 / 2.0) * 2.0,
+            target: rvec2(0., 0.),
             rotation: 0.,
             zoom: 0.66,
         };
@@ -303,8 +303,7 @@ impl<'a> Game<'a> {
         if self.rl.is_window_resized() {
             let window_width = self.rl.get_screen_width();
             let window_height = self.rl.get_screen_height();
-            self.camera.offset =
-                Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0) * 2.0;
+            self.camera.offset = rvec2(window_width as f32 / 2.0, window_height as f32 / 2.0) * 2.0;
 
             // Update blur shader uniforms
             {
@@ -571,7 +570,7 @@ impl<'a> Game<'a> {
                             .get_position();
                         let dir = pl_pos - next_pos;
                         if dir.length() > 256.0 {
-                            let angle = dir.angle_to(Vector2::new(-1., 0.));
+                            let angle = dir.angle_to(rvec2(-1., 0.));
                             let pos = pl_pos - dir.normalized() * 64.0;
                             self.arrow.set_position(pos);
                             self.arrow.set_rotation(angle);
@@ -589,13 +588,13 @@ impl<'a> Game<'a> {
                             let aabb = collider.shape().compute_local_aabb();
                             let h_width = aabb.half_extents()[0];
                             let h_height = aabb.half_extents()[1];
-                            let rec = Rectangle::new(
+                            let rec = rrect(
                                 collider.translation().x,
                                 collider.translation().y,
                                 h_width * 2.0,
                                 h_height * 2.0,
                             );
-                            let origin = Vector2::new(h_width, h_height);
+                            let origin = rvec2(h_width, h_height);
                             mode.draw_rectangle_pro(
                                 rec,
                                 origin,
@@ -642,7 +641,7 @@ impl<'a> Game<'a> {
                 d.draw_text_ex(
                     &self.font,
                     &format!("{:.1}", 1.0 / delta),
-                    Vector2::new(1825., 0.),
+                    rvec2(1825., 0.),
                     50.0,
                     1.0,
                     Color::WHITE,
@@ -656,10 +655,7 @@ impl<'a> Game<'a> {
             d.draw_text_ex(
                 &self.font,
                 &score_text,
-                Vector2 {
-                    x: 0.0,
-                    y: 50.0 * line,
-                },
+                rvec2(0.0, 50.0 * line),
                 50.0,
                 0.0,
                 Color::GREEN,
@@ -671,10 +667,7 @@ impl<'a> Game<'a> {
             d.draw_text_ex(
                 &self.font,
                 &gates_text,
-                Vector2 {
-                    x: 0.0,
-                    y: 50.0 * line,
-                },
+                rvec2(0.0, 50.0 * line),
                 50.0,
                 0.0,
                 Color::GREEN,
@@ -686,10 +679,7 @@ impl<'a> Game<'a> {
             d.draw_text_ex(
                 &self.font,
                 &time_text,
-                Vector2 {
-                    x: 0.0,
-                    y: 50.0 * line,
-                },
+                rvec2(0.0, 50.0 * line),
                 50.0,
                 0.0,
                 Color::GREEN,
@@ -705,10 +695,7 @@ impl<'a> Game<'a> {
                     d.draw_text_ex(
                         &self.font,
                         &fuel_text,
-                        Vector2 {
-                            x: 0.0,
-                            y: 50.0 * line,
-                        },
+                        rvec2(0.0, 50.0 * line),
                         50.0,
                         0.0,
                         Color::GREEN,

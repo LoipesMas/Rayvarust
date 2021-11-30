@@ -32,8 +32,8 @@ impl Sprite {
     }
 
     fn get_recs(texture: &WeakTexture2D, scale: f32) -> (Rectangle, Rectangle) {
-        let source_rec = Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
-        let dest_rec = Rectangle::new(
+        let source_rec = rrect(0.0, 0.0, texture.width as f32, texture.height as f32);
+        let dest_rec = rrect(
             0.0,
             0.0,
             scale * texture.width as f32,
@@ -45,8 +45,8 @@ impl Sprite {
 
     pub fn set_texture(&mut self, texture: WeakTexture2D) {
         {
-            self.source_rec = Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
-            self.dest_rec = Rectangle::new(
+            self.source_rec = rrect(0.0, 0.0, texture.width as f32, texture.height as f32);
+            self.dest_rec = rrect(
                 0.0,
                 0.0,
                 self.scale * texture.width as f32,

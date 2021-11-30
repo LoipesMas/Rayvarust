@@ -18,7 +18,7 @@ impl Button {
     }
 
     pub fn draw(&self, d: &mut RaylibDrawHandle) -> bool {
-        let rec = Rectangle::new(
+        let rec = rrect(
             self.position.x - self.extends.x * 0.5,
             self.position.y - self.extends.y * 0.5,
             self.extends.x,

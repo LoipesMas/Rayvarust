@@ -59,14 +59,14 @@ impl<'a> Menu<'a> {
         let mut line = 0.;
         let start_button = Button::new(
             "Start".to_string(),
-            Vector2::new(120., 40.),
-            center + Vector2::new(0., 50. * line),
+            rvec2(120., 40.),
+            center + rvec2(0., 50. * line),
         );
         line += 1.;
         let quit_button = Button::new(
             "Quit".to_string(),
-            Vector2::new(120., 40.),
-            center + Vector2::new(0., 50. * line),
+            rvec2(120., 40.),
+            center + rvec2(0., 50. * line),
         );
 
         let ship_prev = Button::new(
@@ -143,7 +143,7 @@ impl<'a> Menu<'a> {
             let window_width = self.rl.get_screen_width() as i16;
             let window_height = self.rl.get_screen_height() as i16;
             self.window_size = (window_width, window_height);
-            self.center = Vector2::new(
+            self.center = rvec2(
                 (self.window_size.0 / 2).into(),
                 (self.window_size.1 / 2).into(),
             );
@@ -162,7 +162,7 @@ impl<'a> Menu<'a> {
             100,
         );
         d.gui_label(
-            Rectangle::new(self.center.x - 250., 10., 200., 200.),
+            rrect(self.center.x - 250., 10., 200., 200.),
             Some(rstr!("RAYVARUST")),
         );
         d.gui_set_style(
@@ -205,7 +205,7 @@ impl<'a> Menu<'a> {
             toggle_text = rstr!("Random levels: OFF");
         }
         self.random_levels = d.gui_toggle(
-            Rectangle::new(1200., 700., 200., 50.),
+            rrect(1200., 700., 200., 50.),
             Some(toggle_text),
             self.random_levels,
         );
@@ -216,7 +216,7 @@ impl<'a> Menu<'a> {
             toggle_text = rstr!("Fuel mode: OFF");
         }
         self.fuel_mode = d.gui_toggle(
-            Rectangle::new(1200., 760., 200., 50.),
+            rrect(1200., 760., 200., 50.),
             Some(toggle_text),
             self.fuel_mode,
         );
