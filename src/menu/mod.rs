@@ -144,8 +144,8 @@ impl<'a> Menu<'a> {
             let window_height = self.rl.get_screen_height() as i16;
             self.window_size = (window_width, window_height);
             self.center = rvec2(
-                (self.window_size.0 / 2).into(),
-                (self.window_size.1 / 2).into(),
+                (self.window_size.0 / 2) as f32,
+                (self.window_size.1 / 2) as f32,
             );
         }
 
