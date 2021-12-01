@@ -1,7 +1,6 @@
 # TODO
 
 - Lava planets? (touch = die)
-- Pausing?
 - Some graphics
     - Rocket effect
     - Title screen
