@@ -71,7 +71,7 @@ fn main() {
                     seed = if random {
                         thread_rng().gen::<u16>() as u64
                     } else {
-                        length as u64
+                        ((length << 6) + 321) as u64
                     };
                 }
                 let mut the_game = Game::new(
