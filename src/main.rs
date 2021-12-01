@@ -41,6 +41,8 @@ fn main() {
     let mut seed = 0;
     let mut selected_ship = 0;
 
+    let mut audio = RaylibAudio::init_audio_device();
+
     while !quit {
         if !restart {
             let mut menu = Menu::new(
@@ -77,6 +79,7 @@ fn main() {
                 let mut the_game = Game::new(
                     &mut rl,
                     &thread,
+                    &mut audio,
                     window_width,
                     window_height,
                     seed,

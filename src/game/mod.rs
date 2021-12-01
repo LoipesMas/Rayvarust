@@ -37,6 +37,7 @@ const RENDER_DISTANCE: f32 = 12000i32.pow(2) as f32;
 pub struct Game<'a> {
     rl: &'a mut RaylibHandle,
     thread: &'a RaylibThread,
+    audio: &'a mut RaylibAudio,
     rng: Pcg64,
     fuel_mode: bool,
     draw_fps: bool,
@@ -74,12 +75,20 @@ pub struct Game<'a> {
     def_shader: Shader,
     ren_tex: RenderTexture2D,
     paused: bool,
+    impact_sound: Sound,
+    thruster_sound: Music,
+    thruster_sound2: Music,
+    thruster_volume: f32,
+    air_sound: Music,
+    air_volume: f32,
 }
 
 impl<'a> Game<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         rl: &'a mut RaylibHandle,
         thread: &'a RaylibThread,
+        audio: &'a mut RaylibAudio,
         window_width: i16,
         window_height: i16,
         seed: u64,
@@ -190,6 +199,20 @@ impl<'a> Game<'a> {
         let mut arrow = GameObject::new();
         arrow.sprite = Some(Sprite::new(arrow_tex.clone(), true, 0.5));
 
+        let impact_sound = Sound::load_sound("resources/sound/spaceship_impact.wav").unwrap();
+
+        let mut thruster_sound = Music::load_music_stream(thread, "resources/sound/thruster1.wav").unwrap();
+        thruster_sound.looping = true;
+        audio.play_music_stream(&mut thruster_sound);
+
+        let mut thruster_sound2 = Music::load_music_stream(thread, "resources/sound/thruster2.wav").unwrap();
+        thruster_sound2.looping = true;
+        audio.play_music_stream(&mut thruster_sound2);
+
+        let mut air_sound = Music::load_music_stream(thread, "resources/sound/air_release.wav").unwrap();
+        air_sound.looping = true;
+        audio.play_music_stream(&mut air_sound);
+
         let ren_tex = rl
             .load_render_texture(thread, window_width as u32 * 2, window_height as u32 * 2)
             .unwrap();
@@ -197,6 +220,7 @@ impl<'a> Game<'a> {
         Game {
             rl,
             thread,
+            audio,
             rng: Pcg64::seed_from_u64(seed),
             fuel_mode,
             draw_fps,
@@ -234,6 +258,12 @@ impl<'a> Game<'a> {
             def_shader,
             ren_tex,
             paused: false,
+            impact_sound,
+            thruster_sound,
+            thruster_sound2,
+            thruster_volume: 0.0,
+            air_sound,
+            air_volume: 0.0,
         }
     }
 
@@ -297,8 +327,36 @@ impl<'a> Game<'a> {
     pub fn step(&mut self) -> Option<GameAction> {
         let delta = self.rl.get_frame_time();
 
-        // Tick timers
         if !self.paused {
+
+            // Thruster audio
+            self.audio.update_music_stream(&mut self.thruster_sound);
+            self.audio.update_music_stream(&mut self.thruster_sound2);
+            if self.rl.is_key_down(KeyboardKey::KEY_W) {
+                self.thruster_volume *= 1.0 + (delta * 6.0);
+            }
+            else {
+                self.thruster_volume *= 1.0 - (delta * 4.0);
+            }
+            self.thruster_volume = self.thruster_volume.clamp(0.1, 0.9);
+            self.audio.set_music_volume(&mut self.thruster_sound, self.thruster_volume);
+            self.audio.set_music_volume(&mut self.thruster_sound2, self.thruster_volume);
+
+            // Air release audio
+            self.audio.update_music_stream(&mut self.air_sound);
+            if self.rl.is_key_down(KeyboardKey::KEY_S) ||
+                self.rl.is_key_down(KeyboardKey::KEY_A) ||
+                self.rl.is_key_down(KeyboardKey::KEY_D)
+            {
+                self.air_volume *= 1.0 + (delta * 6.0);
+            }
+            else {
+                self.air_volume *= 1.0 - (delta * 4.0);
+            }
+            self.air_volume = self.air_volume.clamp(0.1, 0.9);
+            self.audio.set_music_volume(&mut self.air_sound, self.air_volume * 0.05);
+
+            // Tick timers
             if !self.completed {
                 self.time_since_start += delta;
             }
@@ -434,6 +492,14 @@ impl<'a> Game<'a> {
                     if let Some(pch) = self.physics_server.player_collider_handle {
                         // One of them is the player
                         if col1 == pch || col2 == pch {
+                            let bh1 = self.collider_set.get(col1).unwrap().parent().unwrap();
+                            let bh2 = self.collider_set.get(col2).unwrap().parent().unwrap();
+                            let b1 = self.rigid_body_set.get(bh1).unwrap();
+                            let b2 = self.rigid_body_set.get(bh2).unwrap();
+                            let vel_dif_mag = (b1.linvel() - b2.linvel()).norm();
+                            if vel_dif_mag > 150.0 {
+                                self.audio.play_sound_multi(&self.impact_sound);
+                            }
                             if !self.completed {
                                 self.player_score -= 10;
                             }
