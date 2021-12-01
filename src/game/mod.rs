@@ -73,6 +73,7 @@ pub struct Game<'a> {
     blur_shader: Shader,
     def_shader: Shader,
     ren_tex: RenderTexture2D,
+    paused: bool,
 }
 
 impl<'a> Game<'a> {
@@ -232,6 +233,7 @@ impl<'a> Game<'a> {
             blur_shader,
             def_shader,
             ren_tex,
+            paused: false,
         }
     }
 
@@ -294,10 +296,14 @@ impl<'a> Game<'a> {
 
     pub fn step(&mut self) -> Option<GameAction> {
         let delta = self.rl.get_frame_time();
-        if !self.completed {
-            self.time_since_start += delta;
+
+        // Tick timers
+        if !self.paused {
+            if !self.completed {
+                self.time_since_start += delta;
+            }
+            self.asteroid_spawn_timer += delta;
         }
-        self.asteroid_spawn_timer += delta;
 
         // Update camera center
         if self.rl.is_window_resized() {
@@ -343,6 +349,11 @@ impl<'a> Game<'a> {
         // Always center mouse
         self.rl.set_mouse_position(self.camera.offset / 2.0);
 
+        // Pause game
+        if self.rl.is_key_pressed(KeyboardKey::KEY_TAB) {
+            self.paused ^= true;
+        }
+
         // Go back to menu
         if self.rl.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
             return Some(GameAction::Menu);
@@ -366,133 +377,135 @@ impl<'a> Game<'a> {
             self.draw_collisions ^= true;
         }
 
-        // Processing
-        for object in self.process_objects.values() {
-            object.borrow_mut().process(&mut self.rl, delta);
-        }
-
-        // Calculating gravity forces
-        let mut planets_vector: Vec<(NVector2, f32)> = Vec::new();
-        for planet in self.planet_objects.values() {
-            let pos = planet.borrow().get_position();
-            let mass = planet.borrow().get_mass();
-            planets_vector.push((vector![pos.x, pos.y], mass));
-        }
-
-        // Pre physics
-        for object in self.phys_objects.values_mut() {
-            let body = &mut self.rigid_body_set[*object.borrow().get_body()];
-            // Only calculate gravity for dynamic objects
-            if body.is_dynamic() {
-                // Calculate gravity
-                let mut gravity_force = vector![0., 0.];
-                for planet_v in planets_vector.iter() {
-                    let dir = planet_v.0 - body.translation();
-                    let dist = dir.norm();
-                    if dist > 7777.7 {
-                        continue;
-                    }
-                    gravity_force +=
-                        dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
-                }
-                // Apply gravity
-                body.apply_force(gravity_force * body.mass(), true);
+        if !self.paused {
+            // Processing
+            for object in self.process_objects.values() {
+                object.borrow_mut().process(&mut self.rl, delta);
             }
-            // Call objects physics process
-            object.borrow_mut().physics_process(delta, body);
-        }
 
-        // Physics
-        self.physics_server
-            .step(&mut self.rigid_body_set, &mut self.collider_set);
+            // Calculating gravity forces
+            let mut planets_vector: Vec<(NVector2, f32)> = Vec::new();
+            for planet in self.planet_objects.values() {
+                let pos = planet.borrow().get_position();
+                let mass = planet.borrow().get_mass();
+                planets_vector.push((vector![pos.x, pos.y], mass));
+            }
 
-        let mut contact_events_guard = self
-            .physics_server
-            .event_handler
-            .contact_events
-            .lock()
-            .unwrap();
-
-        let mut contact_events = contact_events_guard.clone();
-        contact_events_guard.clear();
-        drop(contact_events_guard);
-
-        for event in contact_events.drain(..) {
-            if let ContactEvent::Started(col1, col2) = event {
-                if let Some(pch) = self.physics_server.player_collider_handle {
-                    // One of them is the player
-                    if col1 == pch || col2 == pch {
-                        if !self.completed {
-                            self.player_score -= 10;
-                        }
-                    }
-                    // None of them is the player
-                    else {
-                        // Try to get uuids of asteroids
-                        let asteroid1_uuid = self.asteroid_colliders.get(&col1).cloned();
-                        let asteroid2_uuid = self.asteroid_colliders.get(&col2).cloned();
-                        // Ignore collisions between asteroids
-                        if asteroid1_uuid.is_some() && asteroid2_uuid.is_some() {
+            // Pre physics
+            for object in self.phys_objects.values_mut() {
+                let body = &mut self.rigid_body_set[*object.borrow().get_body()];
+                // Only calculate gravity for dynamic objects
+                if body.is_dynamic() {
+                    // Calculate gravity
+                    let mut gravity_force = vector![0., 0.];
+                    for planet_v in planets_vector.iter() {
+                        let dir = planet_v.0 - body.translation();
+                        let dist = dir.norm();
+                        if dist > 7777.7 {
                             continue;
                         }
-                        // Destroy asteroids
-                        if let Some(asteroid1_uuid) = asteroid1_uuid {
-                            self.remove_asteroid(&asteroid1_uuid, &col1);
+                        gravity_force +=
+                            dir.normalize() * G * planet_v.1 / dir.norm_squared().max(0.01);
+                    }
+                    // Apply gravity
+                    body.apply_force(gravity_force * body.mass(), true);
+                }
+                // Call objects physics process
+                object.borrow_mut().physics_process(delta, body);
+            }
+
+            // Physics
+            self.physics_server
+                .step(&mut self.rigid_body_set, &mut self.collider_set);
+
+            let mut contact_events_guard = self
+                .physics_server
+                .event_handler
+                .contact_events
+                .lock()
+                .unwrap();
+
+            let mut contact_events = contact_events_guard.clone();
+            contact_events_guard.clear();
+            drop(contact_events_guard);
+
+            for event in contact_events.drain(..) {
+                if let ContactEvent::Started(col1, col2) = event {
+                    if let Some(pch) = self.physics_server.player_collider_handle {
+                        // One of them is the player
+                        if col1 == pch || col2 == pch {
+                            if !self.completed {
+                                self.player_score -= 10;
+                            }
                         }
-                        if let Some(asteroid2_uuid) = asteroid2_uuid {
-                            self.remove_asteroid(&asteroid2_uuid, &col2);
+                        // None of them is the player
+                        else {
+                            // Try to get uuids of asteroids
+                            let asteroid1_uuid = self.asteroid_colliders.get(&col1).cloned();
+                            let asteroid2_uuid = self.asteroid_colliders.get(&col2).cloned();
+                            // Ignore collisions between asteroids
+                            if asteroid1_uuid.is_some() && asteroid2_uuid.is_some() {
+                                continue;
+                            }
+                            // Destroy asteroids
+                            if let Some(asteroid1_uuid) = asteroid1_uuid {
+                                self.remove_asteroid(&asteroid1_uuid, &col1);
+                            }
+                            if let Some(asteroid2_uuid) = asteroid2_uuid {
+                                self.remove_asteroid(&asteroid2_uuid, &col2);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // When player goes through a gate
-        if !self.completed && self.physics_server.player_intersected {
-            // Get collider
-            if let Some(col_h) = self.physics_server.last_intersected {
-                // Get body
-                let body_h = &self.collider_set[col_h].parent();
-                if let Some(body_h) = body_h {
-                    // Check if gate number is the one that player should go through
-                    let body = &self.rigid_body_set[*body_h];
-                    if body.user_data == self.next_gate.into() {
-                        // "Select" next gate
-                        self.next_gate += 1;
-                        self.player_score += 30;
+            // When player goes through a gate
+            if !self.completed && self.physics_server.player_intersected {
+                // Get collider
+                if let Some(col_h) = self.physics_server.last_intersected {
+                    // Get body
+                    let body_h = &self.collider_set[col_h].parent();
+                    if let Some(body_h) = body_h {
+                        // Check if gate number is the one that player should go through
+                        let body = &self.rigid_body_set[*body_h];
+                        if body.user_data == self.next_gate.into() {
+                            // "Select" next gate
+                            self.next_gate += 1;
+                            self.player_score += 30;
+                        }
                     }
                 }
             }
-        }
 
-        if self.player_score < 0 {
-            if let Some(player) = &self.player_rc {
-                let mut player = player.borrow_mut();
-                player.failed = true;
-                self.completed = true;
+            if self.player_score < 0 {
+                if let Some(player) = &self.player_rc {
+                    let mut player = player.borrow_mut();
+                    player.failed = true;
+                    self.completed = true;
+                }
             }
-        }
 
-        self.completed |= self.next_gate >= self.gate_count;
+            self.completed |= self.next_gate >= self.gate_count;
 
-        // Update state of all physics objects
-        // (This makes their position and rotation the same as their rigidbodies')
-        for object in self.phys_objects.values_mut() {
-            let body = &self.rigid_body_set[*object.borrow().get_body()];
-            object.borrow_mut().update_state(body);
-        }
+            // Update state of all physics objects
+            // (This makes their position and rotation the same as their rigidbodies')
+            for object in self.phys_objects.values_mut() {
+                let body = &self.rigid_body_set[*object.borrow().get_body()];
+                object.borrow_mut().update_state(body);
+            }
 
-        // Camera
-        if let Some(player_rc) = &self.player_rc {
-            // Camera follows player
-            self.camera.target = to_rv2(lerp(
-                to_nv2(self.camera.target),
-                to_nv2(player_rc.borrow().get_position()),
-                0.15,
-            ));
-            self.camera.rotation = -player_rc.borrow().get_rotation() * RAD2DEG as f32;
-            // Player controls zoom
-            self.camera.zoom = player_rc.borrow().get_zoom();
+            // Camera
+            if let Some(player_rc) = &self.player_rc {
+                // Camera follows player
+                self.camera.target = to_rv2(lerp(
+                    to_nv2(self.camera.target),
+                    to_nv2(player_rc.borrow().get_position()),
+                    0.15,
+                ));
+                self.camera.rotation = -player_rc.borrow().get_rotation() * RAD2DEG as f32;
+                // Player controls zoom
+                self.camera.zoom = player_rc.borrow().get_zoom();
+            }
         }
 
         let mut d = self.rl.begin_drawing(self.thread);
@@ -703,6 +716,21 @@ impl<'a> Game<'a> {
                 }
             }
 
+            // "Paused" text
+            if self.paused {
+                let text = "Paused";
+                let mut text_position = self.camera.offset / 2.0; // center
+                text_position += rvec2(-75.0, -230.0); // offset from center
+                d.draw_text_ex(
+                    &self.font,
+                    text,
+                    text_position,
+                    50.0,
+                    0.0,
+                    Color::PINK,
+                );
+            }
+
             // Restart prompt
             if self.completed {
                 let restart_text = if self
@@ -713,7 +741,7 @@ impl<'a> Game<'a> {
                 {
                     "     Level failed\nPress R to restart"
                 } else {
-                    "      Level won!\nPress R to restart"
+                    "Level completed!\nPress R to restart"
                 };
                 let mut text_position = self.camera.offset / 2.0; // center
                 text_position += rvec2(-150.0, -130.0); // offset from center
@@ -802,6 +830,8 @@ impl<'a> Game<'a> {
             .build();
 
         let uuid = asteroid.get_uuid();
+
+        asteroid.update_state(&rigid_body);
 
         let rigid_body_handle = self.rigid_body_set.insert(rigid_body);
 

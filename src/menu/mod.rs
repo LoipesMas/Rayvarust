@@ -35,6 +35,7 @@ Controls:
   WSAD - acceleration
   IO - rotation
   KL - zoom in/out
+  Tab - pause/unpause
 Rules:
   Go through a gate = +30 points
   Touch anything = -10 points
@@ -269,7 +270,7 @@ impl<'a> Menu<'a> {
                 &self.font,
                 POPUP_TEXT,
                 POPUP_POS + rvec2(45., -10.),
-                35.0,
+                30.0,
                 0.0,
                 Color::RAYWHITE,
             );
@@ -278,7 +279,7 @@ impl<'a> Menu<'a> {
                 &self.font,
                 "(Both hands on keyboard recommended)",
                 POPUP_POS + rvec2(345., 40.),
-                35.0,
+                30.0,
                 0.0,
                 Color::RAYWHITE,
             );
