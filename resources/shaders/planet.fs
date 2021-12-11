@@ -16,8 +16,6 @@ out vec4 finalColor;
 
 const float radius = 20.0;
 const float rad_thresh = 1.0;
-//const vec4 colorA = vec4(0.0, 1.0, 0.5, 1.0);
-//const vec4 colorB = vec4(0.5, 0.3, 0.9, 1.0);
 
 float random(vec2 q)
 {
@@ -74,7 +72,7 @@ void main()
     f = value_noise(vec2(abs(angle)*60., r*radius+colorA.g));
 
 	//sigmoid
-	f = 1.0/(1.0+pow(2.2718, -f));
+	//f = 1.0/(1.0+pow(2.2718, -f));
     
     vec3 color = mix(colorA, colorB, f).rgb;
 	if (abs(r-rad_thresh) < 0.005) {
