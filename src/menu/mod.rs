@@ -44,6 +44,7 @@ Rules:
 ";
 
 impl<'a> Menu<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         rl: &'a mut RaylibHandle,
         thread: &'a RaylibThread,
@@ -222,6 +223,15 @@ impl<'a> Menu<'a> {
             self.fuel_mode,
         );
 
+        d.gui_label(
+            rrect(
+                self.start_button.position.x - 90.0,
+                self.start_button.position.y - 90.,
+                200.,
+                30.,
+            ),
+            Some(rstr!("Select level length:")),
+        );
         // Level length slider
         self.selected_length = d
             .gui_slider(
