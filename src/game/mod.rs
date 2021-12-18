@@ -201,15 +201,18 @@ impl<'a> Game<'a> {
 
         let impact_sound = Sound::load_sound("resources/sound/spaceship_impact.wav").unwrap();
 
-        let mut thruster_sound = Music::load_music_stream(thread, "resources/sound/thruster1.wav").unwrap();
+        let mut thruster_sound =
+            Music::load_music_stream(thread, "resources/sound/thruster1.wav").unwrap();
         thruster_sound.looping = true;
         audio.play_music_stream(&mut thruster_sound);
 
-        let mut thruster_sound2 = Music::load_music_stream(thread, "resources/sound/thruster2.wav").unwrap();
+        let mut thruster_sound2 =
+            Music::load_music_stream(thread, "resources/sound/thruster2.wav").unwrap();
         thruster_sound2.looping = true;
         audio.play_music_stream(&mut thruster_sound2);
 
-        let mut air_sound = Music::load_music_stream(thread, "resources/sound/air_release.wav").unwrap();
+        let mut air_sound =
+            Music::load_music_stream(thread, "resources/sound/air_release.wav").unwrap();
         air_sound.looping = true;
         audio.play_music_stream(&mut air_sound);
 
@@ -328,33 +331,33 @@ impl<'a> Game<'a> {
         let delta = self.rl.get_frame_time();
 
         if !self.paused {
-
             // Thruster audio
             self.audio.update_music_stream(&mut self.thruster_sound);
             self.audio.update_music_stream(&mut self.thruster_sound2);
             if self.rl.is_key_down(KeyboardKey::KEY_W) {
                 self.thruster_volume *= 1.0 + (delta * 6.0);
-            }
-            else {
+            } else {
                 self.thruster_volume *= 1.0 - (delta * 4.0);
             }
             self.thruster_volume = self.thruster_volume.clamp(0.1, 0.9);
-            self.audio.set_music_volume(&mut self.thruster_sound, self.thruster_volume);
-            self.audio.set_music_volume(&mut self.thruster_sound2, self.thruster_volume);
+            self.audio
+                .set_music_volume(&mut self.thruster_sound, self.thruster_volume);
+            self.audio
+                .set_music_volume(&mut self.thruster_sound2, self.thruster_volume);
 
             // Air release audio
             self.audio.update_music_stream(&mut self.air_sound);
-            if self.rl.is_key_down(KeyboardKey::KEY_S) ||
-                self.rl.is_key_down(KeyboardKey::KEY_A) ||
-                self.rl.is_key_down(KeyboardKey::KEY_D)
+            if self.rl.is_key_down(KeyboardKey::KEY_S)
+                || self.rl.is_key_down(KeyboardKey::KEY_A)
+                || self.rl.is_key_down(KeyboardKey::KEY_D)
             {
                 self.air_volume *= 1.0 + (delta * 6.0);
-            }
-            else {
+            } else {
                 self.air_volume *= 1.0 - (delta * 4.0);
             }
             self.air_volume = self.air_volume.clamp(0.1, 0.9);
-            self.audio.set_music_volume(&mut self.air_sound, self.air_volume * 0.05);
+            self.audio
+                .set_music_volume(&mut self.air_sound, self.air_volume * 0.05);
 
             // Tick timers
             if !self.completed {
@@ -787,14 +790,7 @@ impl<'a> Game<'a> {
                 let text = "Paused";
                 let mut text_position = self.camera.offset / 2.0; // center
                 text_position += rvec2(-75.0, -230.0); // offset from center
-                d.draw_text_ex(
-                    &self.font,
-                    text,
-                    text_position,
-                    50.0,
-                    0.0,
-                    Color::PINK,
-                );
+                d.draw_text_ex(&self.font, text, text_position, 50.0, 0.0, Color::PINK);
             }
 
             // Restart prompt
