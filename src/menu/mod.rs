@@ -27,8 +27,8 @@ pub struct Menu<'a> {
     popup_button: Button,
 }
 
-const SHIP_SELECT_POS: Vector2 = Vector2 { x: 200.0, y: 440.0 };
-const POPUP_POS: Vector2 = Vector2 { x: 500.0, y: 300.0 };
+const SHIP_SELECT_POS: Vector2 = Vector2 { x: 0.1, y: 0.4 };
+const POPUP_POS: Vector2 = Vector2 { x: 0.26, y: 0.27 };
 
 const POPUP_TEXT: &str = "
 Controls:
@@ -74,19 +74,19 @@ impl<'a> Menu<'a> {
         let ship_prev = Button::new(
             "<".to_string(),
             rvec2(40., 40.),
-            SHIP_SELECT_POS + rvec2(90.0, 280.),
+            SHIP_SELECT_POS * rvec2(window_width, window_height) + rvec2(90.0, 280.),
         );
 
         let ship_next = Button::new(
             ">".to_string(),
             rvec2(40., 40.),
-            SHIP_SELECT_POS + rvec2(170., 280.),
+            SHIP_SELECT_POS * rvec2(window_width, window_height) + rvec2(170., 280.),
         );
 
         let popup_button = Button::new(
             "ABOUT".to_string(),
             rvec2(130., 60.),
-            POPUP_POS + rvec2(900., 590.),
+            POPUP_POS * rvec2(window_width, window_height) + rvec2(900., 590.),
         );
 
         let font = rl
@@ -149,13 +149,37 @@ impl<'a> Menu<'a> {
                 (self.window_size.0 / 2) as f32,
                 (self.window_size.1 / 2) as f32,
             );
+            let mut line = 0.;
+            self.start_button.position = self.center + rvec2(0., 50. * line);
+            line += 1.;
+            self.quit_button.position = self.center + rvec2(0., 50. * line);
+            self.ship_prev.position =
+                SHIP_SELECT_POS * rvec2(window_width, window_height) + rvec2(90.0, 280.);
+            self.ship_next.position =
+                SHIP_SELECT_POS * rvec2(window_width, window_height) + rvec2(170.0, 280.);
+            self.popup_button.position =
+                (POPUP_POS + rvec2(0.468, 0.546)) * rvec2(window_width, window_height);
         }
 
         let esc_pressed = self.rl.is_key_pressed(KeyboardKey::KEY_ESCAPE);
 
         let mut d = self.rl.begin_drawing(self.thread);
         d.clear_background(Color::DARKPURPLE);
-        d.draw_texture(&self.bg_tex, 0, 0, Color::WHITE);
+        let bg_rect = rrect(
+            0,
+            0,
+            self.window_size.0,
+            (self.window_size.0 as f32 * (9.0 / 16.0)) as i16,
+        );
+        let pos_y = (bg_rect.height - (self.window_size.1 as f32)).max(0.0) / 2.0;
+        d.draw_texture_pro(
+            &self.bg_tex,
+            rrect(0, pos_y, self.bg_tex.width(), self.bg_tex.height()),
+            bg_rect,
+            rvec2(0, 0),
+            0.0,
+            Color::WHITE,
+        );
 
         d.gui_set_font(&self.font);
         d.gui_set_style(
@@ -192,7 +216,7 @@ impl<'a> Menu<'a> {
         // Draw selected ship
         d.draw_texture_v(
             self.ship_textures[self.selected_ship].clone(),
-            SHIP_SELECT_POS,
+            SHIP_SELECT_POS * rvec2(self.window_size.0, self.window_size.1),
             Color::WHITE,
         );
 
@@ -207,7 +231,12 @@ impl<'a> Menu<'a> {
             toggle_text = rstr!("Random levels: OFF");
         }
         self.random_levels = d.gui_toggle(
-            rrect(1200., 700., 200., 50.),
+            rrect(
+                0.625 * self.window_size.0 as f32,
+                0.65 * self.window_size.1 as f32,
+                200.,
+                50.,
+            ),
             Some(toggle_text),
             self.random_levels,
         );
@@ -218,7 +247,12 @@ impl<'a> Menu<'a> {
             toggle_text = rstr!("Fuel mode: OFF");
         }
         self.fuel_mode = d.gui_toggle(
-            rrect(1200., 760., 200., 50.),
+            rrect(
+                0.625 * self.window_size.0 as f32,
+                0.65 * self.window_size.1 as f32 + 60.0,
+                200.,
+                50.,
+            ),
             Some(toggle_text),
             self.fuel_mode,
         );
@@ -273,13 +307,17 @@ impl<'a> Menu<'a> {
 
         if self.popup_open {
             // Draw popup
-            d.draw_texture_v(&self.popup_texture, POPUP_POS, Color::WHITE);
+            d.draw_texture_v(
+                &self.popup_texture,
+                POPUP_POS * rvec2(self.window_size.0, self.window_size.1),
+                Color::WHITE,
+            );
 
             // Draw popup text
             d.draw_text_ex(
                 &self.font,
                 POPUP_TEXT,
-                POPUP_POS + rvec2(45., -10.),
+                POPUP_POS * rvec2(self.window_size.0, self.window_size.1) + rvec2(45., -10.),
                 30.0,
                 0.0,
                 Color::RAYWHITE,
@@ -288,7 +326,7 @@ impl<'a> Menu<'a> {
             d.draw_text_ex(
                 &self.font,
                 "(Both hands on keyboard recommended)",
-                POPUP_POS + rvec2(345., 40.),
+                POPUP_POS * rvec2(self.window_size.0, self.window_size.1) + rvec2(345., 40.),
                 30.0,
                 0.0,
                 Color::RAYWHITE,
