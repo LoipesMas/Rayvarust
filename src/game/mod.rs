@@ -334,7 +334,7 @@ impl<'a> Game<'a> {
             // Thruster audio
             self.audio.update_music_stream(&mut self.thruster_sound);
             self.audio.update_music_stream(&mut self.thruster_sound2);
-            if self.rl.is_key_down(KeyboardKey::KEY_W) {
+            if self.rl.is_key_down(KeyboardKey::KEY_W) && !self.completed {
                 self.thruster_volume *= 1.0 + (delta * 6.0);
             } else {
                 self.thruster_volume *= 1.0 - (delta * 4.0);
@@ -347,9 +347,10 @@ impl<'a> Game<'a> {
 
             // Air release audio
             self.audio.update_music_stream(&mut self.air_sound);
-            if self.rl.is_key_down(KeyboardKey::KEY_S)
+            if (self.rl.is_key_down(KeyboardKey::KEY_S)
                 || self.rl.is_key_down(KeyboardKey::KEY_A)
-                || self.rl.is_key_down(KeyboardKey::KEY_D)
+                || self.rl.is_key_down(KeyboardKey::KEY_D))
+                && !self.completed
             {
                 self.air_volume *= 1.0 + (delta * 6.0);
             } else {
@@ -357,7 +358,7 @@ impl<'a> Game<'a> {
             }
             self.air_volume = self.air_volume.clamp(0.1, 0.9);
             self.audio
-                .set_music_volume(&mut self.air_sound, self.air_volume * 0.05);
+                .set_music_volume(&mut self.air_sound, self.air_volume * 0.15);
 
             // Tick timers
             if !self.completed {
